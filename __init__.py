@@ -11,8 +11,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
+import sys
+import bpy, os
+from bpy.props import BoolProperty
 from . import generate_ue_mat_nodes
+from . import install
 
 bl_info = {
     "name" : "Material Nodes Copy to UE",
@@ -20,7 +23,7 @@ bl_info = {
     "description" : "",
     "blender" : (3, 00, 0),
     "version" : (0, 0, 1),
-    "location" : "",
+    "location" : "https://github.com/KeyToon9/bl_mats_copy_ue",
     "warning" : "",
     "category" : "Generic"
 }
@@ -37,8 +40,17 @@ class CP2U_OT_CopyMatNodesOperator(bpy.types.Operator):
         return nodes
 
     def execute(self, context):
-        
-        generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height)
+        mats_str = ''
+        try:
+            import pyperclip
+
+            mats_str = generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height)
+            pyperclip.copy(mats_str)
+            self.report({'INFO'}, "Copy to clipboard.")
+        except ModuleNotFoundError:
+            print("Failed to import pyperclip module.")
+            self.report({'ERROR'}, "Failed to import pyperclip module.")
+
         
         return {"FINISHED"}
 
@@ -62,10 +74,64 @@ class CP2U_PT_MatEditorPanel(bpy.types.Panel):
 
         row.operator("cp2u.copy_mat_nodes", text="Copy", icon="COPYDOWN")
 
+def get_path():
+    return os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+def get_name():
+    return os.path.basename(get_path())
+
+def get_prefs():
+    return bpy.context.preferences.addons['bl_mats_copy_ue'].preferences
+
+class CP2U_OT_InstallPyperclip(bpy.types.Operator):
+    bl_idname: str = "cp2u.install_pyperclip"
+    bl_label: str = "Install Pyperclip"
+    bl_description = "Install pip and pyperclip for Blender Python."
+
+
+
+    def execute(self, context):
+        print("\nCP2U: Installing PIP.")
+
+        log = []
+
+        pythonbinpath, ensurepippath, usersitepackagespath = install.get_python_path()
+        installed = install.install_pip(pythonbinpath, ensurepippath, log, mode='USER')
+
+        if installed:
+
+            installed = install.update_pip(pythonbinpath, log, mode='USER')
+
+            installed = install.install_pyperclip(pythonbinpath, log, mode='USER')
+
+            get_prefs().is_installed_pyperclip, get_prefs().is_require_restart = install.test_import_pyperclip(installed, log, usersitepackagespath)
+
+        return {"FINISHED"}
+
+class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
+    bl_idname = __name__
+
+    is_installed_pyperclip: BoolProperty(name="is_installed_pyperclip", default=False)
+    is_require_restart: BoolProperty(name="is_require_restart", default=False)
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.label(text="Install PIP and pyperclip for Blender Python:")
+        row = layout.row()
+
+        row.operator("cp2u.install_pyperclip", text="Install Pyperclip", icon="PREFERENCES")
+
+        
+
 def register():
     bpy.utils.register_class(CP2U_OT_CopyMatNodesOperator)
     bpy.utils.register_class(CP2U_PT_MatEditorPanel)
+    bpy.utils.register_class(CP2U_OT_InstallPyperclip)
+    bpy.utils.register_class(CP2U_PT_AddonPreferencesPanel)
 
 def unregister():
     bpy.utils.unregister_class(CP2U_OT_CopyMatNodesOperator)
     bpy.utils.unregister_class(CP2U_PT_MatEditorPanel)
+    bpy.utils.unregister_class(CP2U_PT_AddonPreferencesPanel)
+    bpy.utils.unregister_class(CP2U_OT_InstallPyperclip)

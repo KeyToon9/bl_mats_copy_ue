@@ -4,6 +4,31 @@ import uuid
 NodeClassMap = {
     "VALUE" : "/Script/Engine.MaterialExpressionConstant",
     "RGB" : "/Script/Engine.MaterialExpressionConstant4Vector",
+    # Math Node Two Input
+    "ADD" : "/Script/Engine.MaterialExpressionAdd",
+    "SUBTRACT" : "/Script/Engine.MaterialExpressionSubtract",
+    "MULTIPLY" : "/Script/Engine.MaterialExpressionMultiply",
+    "DIVIDE" : "/Script/Engine.MaterialExpressionDivide",
+    "POWER" : "/Script/Engine.MaterialExpressionPower",
+    "MINIMUM" : "/Script/Engine.MaterialExpressionMin",
+    "MAXIMUM" : "/Script/Engine.MaterialExpressionMax",
+    "MODULO" : "/Script/Engine.MaterialExpressionFmod",
+    "ARCTAN2" : "/Script/Engine.MaterialExpressionArctangent2Fast",
+    # Math Node One Input
+    'SQRT': "/Script/Engine.MaterialExpressionSquareRoot",
+	'ABSOLUTE': "/Script/Engine.MaterialExpressionAbs",
+	'ROUND': "/Script/Engine.MaterialExpressionRound",
+	'FLOOR': "/Script/Engine.MaterialExpressionFloor",
+	'CEIL': "/Script/Engine.MaterialExpressionCeil",
+	'FRACT': "/Script/Engine.MaterialExpressionFrac",
+	'SINE': "/Script/Engine.MaterialExpressionSine",
+	'COSINE': "/Script/Engine.MaterialExpressionCosine",
+	'TANGENT': "/Script/Engine.MaterialExpressionTangent",
+	'ARCSINE': "/Script/Engine.MaterialExpressionArcsineFast",
+	'ARCCOSINE': "/Script/Engine.MaterialExpressionArccosineFast",
+	'ARCTANGENT': "/Script/Engine.MaterialExpressionArctangentFast",
+	'SIGN': "/Script/Engine.MaterialExpressionSign",
+	'TRUNC': "/Script/Engine.MaterialExpressionTruncate",
 }
 
 NodeNameMap = {
@@ -11,11 +36,30 @@ NodeNameMap = {
     "VALUE" : "MaterialExpressionConstant",
     "RGB" : "MaterialExpressionConstant4Vector",
     # Math Node Two Input
+    "ADD" : "MaterialExpressionAdd",
+    "SUBTRACT" : "MaterialExpressionSubtract",
     "MULTIPLY" : "MaterialExpressionMultiply",
-}
-
-Math_Two_NodeClassMap = {
-    "MULTIPLY" : "/Script/Engine.MaterialExpressionMultiply",
+    "DIVIDE" : "MaterialExpressionDivide",
+    "POWER" : "MaterialExpressionPower",
+    "MINIMUM" : "MaterialExpressionMin",
+    "MAXIMUM" : "MaterialExpressionMax",
+    "MODULO" : "MaterialExpressionFmod",
+    "ARCTAN2" : "MaterialExpressionArctangent2Fast",
+    # Math Node One Input
+    'SQRT': "MaterialExpressionSquareRoot",
+	'ABSOLUTE': "MaterialExpressionAbs",
+	'ROUND': "MaterialExpressionRound",
+	'FLOOR': "MaterialExpressionFloor",
+	'CEIL': "MaterialExpressionCeil",
+	'FRACT': "MaterialExpressionFrac",
+	'SINE': "MaterialExpressionSine",
+	'COSINE': "MaterialExpressionCosine",
+	'TANGENT': "MaterialExpressionTangent",
+	'ARCSINE': "MaterialExpressionArcsineFast",
+	'ARCCOSINE': "MaterialExpressionArccosineFast",
+	'ARCTANGENT': "MaterialExpressionArctangentFast",
+	'SIGN': "MaterialExpressionSign",
+	'TRUNC': "MaterialExpressionTruncate",
 }
 
 GlobalName = "MaterialGraphNode_{}"
@@ -26,10 +70,11 @@ EndTemplate = 'End Object\n'
 MatExpTemplate = "\tMaterialExpression={}\'\"{}\"\'\n"
 NodePosTemplate = "\tNodePosX={}\n\tNodePosY={}\n"
 
+InputTemplate = "\t\t{}=(Expression={}\'\"{}.{}\"\')\n"
 MatContentExpTemplate = "Expression={Type}\'\"{Graph}.{Name}\"\'"
 LinkTemplate = "{Graph} {UUID},"
 LinkedToTemplate = "LinkedTo=({}),"
-PinTemplate = "CustomProperties Pin (PinId={UUID},{LinkStr})"
+PinTemplate = "\tCustomProperties Pin (PinId={UUID},{LinkStr})\n"
 
 gl_uuid_namespace = uuid.uuid1()
 
@@ -37,29 +82,35 @@ def get_uuid(name) -> str:
     global gl_uuid_namespace
     return str(uuid.uuid3(namespace=gl_uuid_namespace, name=name).hex).upper()
 
-# todo: 要返回两个值，一个具体数值，一个是pin连接信息
-
 gl_node_map = {}
 gl_node_socket_map = {}
 
 def _get_node_names(id, node) -> List[str]:
-    node_type = ""
-    if (node.type in NodeClassMap):
-        node_type = NodeNameMap[node.type]
-        
-    gragh_name = GlobalName.format(str(id))
-    node_name = node_type + '_' + str(id)
+    global gl_node_map
+    if not (node in gl_node_map):
+        node_type = ""
+        if node.type in NodeClassMap:
+            node_type = NodeNameMap[node.type]
+        elif node.operation in NodeClassMap:
+            node_type = NodeNameMap[node.operation]
 
-    return [gragh_name, node_name]
+        gragh_name = GlobalName.format(str(id))
+        node_name = node_type + '_' + str(id)
+
+        gl_node_map[node] = [gragh_name, node_name, node_type].copy()
+
+    return gl_node_map[node]
 
 # 返回 按照inputs排序
 # from node对应的graphname和nodename
 # socket 对应的 pin uuid
+# todo: 不应该把没链接的也放进来
 def _gen_linked_infos(id, node):
     global gl_node_map
     global gl_node_socket_map
 
-    ret_node_names = []
+    ret_in_node_names = []
+    ret_out_node_names = []
     # input and output pins array
     # the first uuid is itself
     # others are linkto socket uuid
@@ -88,12 +139,8 @@ def _gen_linked_infos(id, node):
                     # get linked node info
                     to_node_names = []
                     if not link.from_node in gl_node_map:
-                        to_node_names = _get_node_names(id, link.from_node)
                         id += 1
-                        gl_node_map[link.from_node] = to_node_names.copy()
-                    else:
-                        to_node_names = gl_node_map[link.from_node]
-                    ret_node_names.append(to_node_names)
+                    ret_in_node_names.append(_get_node_names(id+1, link.from_node))
 
                     link_to_pin_uuid = ''
                     if not link.from_socket in gl_node_socket_map:
@@ -111,7 +158,7 @@ def _gen_linked_infos(id, node):
             # constant value input
             else:
                 # if contant, will create a new contant value node in ue
-                ret_node_names.append('_CONSTANT_')
+                ret_in_node_names.append('_CONSTANT_')
         
     # todo: outputs 要去ue里看看一个节点多个输出的pin是怎么样的
     for output in node.outputs:
@@ -133,12 +180,8 @@ def _gen_linked_infos(id, node):
                     # get linked node info
                     to_node_names = []
                     if not link.to_node in gl_node_map:
-                        to_node_names = _get_node_names(id, link.to_node)
                         id += 1
-                        gl_node_map[link.to_node] = to_node_names.copy()
-                    else:
-                        to_node_names = gl_node_map[link.to_node]
-                    ret_node_names.append(to_node_names)
+                    ret_out_node_names.append(_get_node_names(id+1, link.to_node))
 
                     link_to_pin_uuid = ''
                     if not link.to_socket in gl_node_socket_map:
@@ -153,89 +196,176 @@ def _gen_linked_infos(id, node):
                     
             ret_output_pins_uuid.append(pin_info)
     
-    print(ret_node_names)
-    print(ret_input_pins_uuid)
-    print(ret_output_pins_uuid)
-    return {'node_names': ret_node_names, 'inputs_uuid': ret_input_pins_uuid, 'outputs_uuid': ret_output_pins_uuid}
+    # print(ret_node_names)
+    # print(ret_input_pins_uuid)
+    # print(ret_output_pins_uuid)
+    return {'node_names': [ret_in_node_names, ret_out_node_names], 'inputs_uuid': ret_input_pins_uuid, 'outputs_uuid': ret_output_pins_uuid}
                 
 
-def _exp_rgb(node):
+def _exp_rgb(node, linked_info):
     # if not node.get_out_nodes()[0].is_linked:
         value = node.outputs[0].default_value
         pin = ""
         if node.outputs[0].is_linked:
-            pass
-        return { "Value": "Constant=(R=%.6f,G=%.6f,B=%.6f,A=%.6f)\n"%tuple(value), "Pin": "" } 
+            for output in linked_info['outputs_uuid']:
+                links_pin_str = ''
+                for i in range(1, len(output)):
+                    links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+                pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+        return { "Value": "\t\tConstant=(R=%.6f,G=%.6f,B=%.6f,A=%.6f)\n"%tuple(value), "Pin": pin } 
 
-def _exp_value(node):
+def _exp_value(node, linked_info):
     # if not node.get_out_nodes()[0].is_linked:
         value = node.outputs[0].default_value
-        return { "Value": "R=%.6f\n"%(value), "Pin": "" }
+        pin = ""
+        if node.outputs[0].is_linked:
+            for output in linked_info['outputs_uuid']:
+                links_pin_str = ''
+                for i in range(1, len(output)):
+                    links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+                pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+        return { "Value": "\t\tR=%.6f\n"%(value), "Pin": pin }
 
-def _exp_math(node):
+# A B
+Math_Two_NodeClassMap = {
+    "ADD" : "/Script/Engine.MaterialExpressionAdd",
+    "SUBTRACT" : "/Script/Engine.MaterialExpressionSubtract",
+    "MULTIPLY" : "/Script/Engine.MaterialExpressionMultiply",
+    "DIVIDE" : "/Script/Engine.MaterialExpressionDivide",
+    "POWER" : "/Script/Engine.MaterialExpressionPower",
+    "MINIMUM" : "/Script/Engine.MaterialExpressionMin",
+    "MAXIMUM" : "/Script/Engine.MaterialExpressionMax",
+    "MODULO" : "/Script/Engine.MaterialExpressionFmod",
+    # You can change to normal node
+    "ARCTAN2" : "/Script/Engine.MaterialExpressionArctangent2Fast",
+}
+
+# Input
+Math_One_NodeClassMap = {
+	'SQRT': "/Script/Engine.MaterialExpressionSquareRoot",
+	'ABSOLUTE': "/Script/Engine.MaterialExpressionAbs",
+	'ROUND': "/Script/Engine.MaterialExpressionRound",
+	'FLOOR': "/Script/Engine.MaterialExpressionFloor",
+	'CEIL': "/Script/Engine.MaterialExpressionCeil",
+	'FRACT': "/Script/Engine.MaterialExpressionFrac",
+	'SINE': "/Script/Engine.MaterialExpressionSine",
+	'COSINE': "/Script/Engine.MaterialExpressionCosine",
+	'TANGENT': "/Script/Engine.MaterialExpressionTangent",
+    # You can change to normal node
+	'ARCSINE': "/Script/Engine.MaterialExpressionArcsineFast",
+	'ARCCOSINE': "/Script/Engine.MaterialExpressionArccosineFast",
+	'ARCTANGENT': "/Script/Engine.MaterialExpressionArctangentFast",
+	'SIGN': "/Script/Engine.MaterialExpressionSign",
+	'TRUNC': "/Script/Engine.MaterialExpressionTruncate",
+}
+
+def _exp_math(node, linked_info):
     op = node.operation
-    exp = None
-
+    exp = ''
+    pin = ''
     if op in Math_Two_NodeClassMap:
-        pass
+        for i, inputs in enumerate(linked_info['inputs_uuid']):
+            links_pin_str = ''
+            if linked_info['node_names'][0][i] == '_CONSTANT_':
+                # todo: 如果没有输入，是个常量，则需要新建一个常量节点
+                pass
+            else:
+                if i == 0:
+                    exp += InputTemplate.format("A", linked_info['node_names'][0][i][2], linked_info['node_names'][0][i][0], linked_info['node_names'][0][i][1])
+                else:
+                    exp += InputTemplate.format("B", linked_info['node_names'][0][i][2], linked_info['node_names'][0][i][0], linked_info['node_names'][0][i][1])
+                
+                for j in range(1, len(inputs)):
+                    links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][0][i][0], UUID=inputs[j])
+                pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+
+    elif op in Math_One_NodeClassMap:
+        for i, inputs in enumerate(linked_info['inputs_uuid']):
+            links_pin_str = ''
+            if linked_info['node_names'][0][i] == '_CONSTANT_':
+                # todo: 如果没有输入，是个常量，则需要新建一个常量节点
+                pass
+            else:
+                exp += InputTemplate.format("Input", linked_info['node_names'][0][i][2], linked_info['node_names'][0][i][0], linked_info['node_names'][0][i][1])
+
+            for j in range(1, len(inputs)):
+                    links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][0][i][0], UUID=inputs[j])
+            pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+    
+    if node.outputs[0].is_linked:
+        for output in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(output)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+            pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    return {"Value": exp, "Pin": pin}
 
 
 def _gen_node_str(id, node, height) -> str:
     node_expression : str = ""
-    try:
-        node_type = ""
-        if (node.type in NodeClassMap):
-            node_type = NodeNameMap[node.type]
-        
-        ObjectName = node_type + '_' + str(id)
-        GraghNodeName = GlobalName.format(str(id))
+    # try:
+    names = _get_node_names(id, node)
+    gragh_name = names[0]
+    object_name = names[1]
+    node_type = names[2]
 
-        NodeNameStr = NameOption.format(ObjectName)
+    NodeNameStr = NameOption.format(object_name)
 
-        #1 Head
-        node_expression = HeadTemplate.format(
-            ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
-            NameOption.format(GraghNodeName))
+    #1 Head
+    node_expression = HeadTemplate.format(
+        ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
+        NameOption.format(gragh_name))
 
-        #2 Head
-        node_expression += "\t"
-        node_expression += HeadTemplate.format(
-            ClassOption.format(NodeClassMap[node.type]),
-            NodeNameStr)
-        node_expression += "\t"
-        node_expression += EndTemplate
-        #2 End
+    #2 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        ClassOption.format(node_type),
+        NodeNameStr)
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #2 End
 
-        #3 Head
-        node_expression += "\t"
-        node_expression += HeadTemplate.format(
-            "",
-            NodeNameStr)
+    #3 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        "",
+        NodeNameStr)
 
-        # todo: fill content by type
-        node_expression += "\t\t"
-        if node.type == 'RGB':
-            node_expression += _exp_rgb(node)["Value"]
-        if node.type == 'VALUE':
-            node_expression += _exp_value(node)["Value"]
-        
+    # todo: fill content by type
+    linked_info = _gen_linked_infos(id, node)
+    content = None
+    # todo: change to swtich
+    if node.type == 'RGB':
+        content = _exp_rgb(node, linked_info)
+    if node.type == 'VALUE':
+        content = _exp_value(node, linked_info)
+    if node.type == 'MATH':
+        content = _exp_math(node, linked_info)
 
-        node_expression += "\t"
-        node_expression += EndTemplate
-        #3 End
-
-        node_expression += MatExpTemplate.format(node_type, ObjectName)
-        node_expression += NodePosTemplate.format(str(int(node.location.x)), str(int(height - node.location.y)))
-
-        node_expression += EndTemplate
-        #1 End
+    node_expression += content["Value"]
     
-    except KeyError as ke:
-        # todo: warning node type not surpport
-        print(str(ke) + node.get_type())
+
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #3 End
+
+    node_expression += MatExpTemplate.format(node_type, object_name)
+    node_expression += NodePosTemplate.format(str(int(node.location.x)), str(int(height - node.location.y)))
+
+    # CustomProperties
+    node_expression += content['Pin']
+
+    node_expression += EndTemplate
+    #1 End
     
-    finally:
-        return node_expression
+    # except KeyError as ke:
+    #     # todo: warning node type not surpport
+    #     print(str(ke) + node.get_type())
+    
+    # finally:
+
+    return node_expression
 
 def get_ue_mat_str(nodes, height):
     global gl_uuid_namespace
@@ -245,7 +375,10 @@ def get_ue_mat_str(nodes, height):
     gl_uuid_namespace = uuid.uuid1()
     gl_node_map = {}
     gl_node_socket_map = {}
+
+    ue_mat_str = ''
     for idx, node in enumerate(nodes):
-        print(_gen_node_str(idx, node, height))
-        _gen_linked_infos(idx, node)
-        pass
+        ue_mat_str += _gen_node_str(idx, node, height)
+    
+    print(ue_mat_str)
+    return ue_mat_str
