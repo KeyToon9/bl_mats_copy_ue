@@ -331,8 +331,8 @@ def _exp_math(node, linked_info):
 
             # if constant var, create a new node
             if linked_info['node_names'][0][i] == '_CONSTANT_':
-                constant_str, constant_names, constant_uuid = _exp_constant(linked_info['node_names'][1][i]["Type"], 
-                                                            linked_info['node_names'][1][i]["Value"], 
+                constant_str, constant_names, constant_uuid = _exp_constant(linked_info['node_names'][1][0]["Type"], 
+                                                            linked_info['node_names'][1][0]["Value"], 
                                                             _get_node_names(-1, node), inputs[0], node.location)
                 exp_constants.append(constant_str)
                 linkto_graph = constant_names[0]
@@ -370,8 +370,8 @@ def _exp_math(node, linked_info):
             linkto_node = linked_info['node_names'][0][i][1]
 
             if linked_info['node_names'][0][i] == '_CONSTANT_':
-                constant_str, constant_names, constant_uuid = _exp_constant(linked_info['node_names'][1][i]["Type"], 
-                                                            linked_info['node_names'][1][i]["Value"], 
+                constant_str, constant_names, constant_uuid = _exp_constant(linked_info['node_names'][1][0]["Type"], 
+                                                            linked_info['node_names'][1][0]["Value"], 
                                                             _get_node_names(-1, node), inputs[0], node.location)
                 exp_constants.append(constant_str)
                 linkto_graph = constant_names[0]
