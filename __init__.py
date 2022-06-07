@@ -11,6 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from posixpath import split
 import sys
 import bpy, os
 from bpy.props import BoolProperty
@@ -50,6 +51,10 @@ class CP2U_OT_CopyMatNodesOperator(bpy.types.Operator):
         except ModuleNotFoundError:
             print("Failed to import pyperclip module.")
             self.report({'ERROR'}, "Failed to import pyperclip module.")
+            
+            # try refresh system path
+            import site
+            install.update_sys_path(site.getusersitepackages(), [])
 
         
         return {"FINISHED"}
@@ -74,21 +79,16 @@ class CP2U_PT_MatEditorPanel(bpy.types.Panel):
 
         row.operator("cp2u.copy_mat_nodes", text="Copy", icon="COPYDOWN")
 
-def get_path():
-    return os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-
 def get_name():
-    return os.path.basename(get_path())
+    return os.path.basename(os.path.dirname(os.path.realpath(__file__)))
 
 def get_prefs():
-    return bpy.context.preferences.addons['bl_mats_copy_ue'].preferences
+    return bpy.context.preferences.addons[get_name()].preferences
 
 class CP2U_OT_InstallPyperclip(bpy.types.Operator):
     bl_idname: str = "cp2u.install_pyperclip"
     bl_label: str = "Install Pyperclip"
     bl_description = "Install pip and pyperclip for Blender Python."
-
-
 
     def execute(self, context):
         print("\nCP2U: Installing PIP.")
@@ -120,7 +120,13 @@ class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
         layout.label(text="Install PIP and pyperclip for Blender Python:")
         row = layout.row()
 
-        row.operator("cp2u.install_pyperclip", text="Install Pyperclip", icon="PREFERENCES")
+        row.operator("cp2u.install_pyperclip", text="Install Pyperclip", icon="IMPORT")
+
+        # row = layout.row()
+        # split = row.split(factor=0.3)
+        # split.label(text="Copy Shortcut:")
+        # split.box()
+        # todo: custom shortcut for copy noeds
 
         
 
@@ -135,3 +141,6 @@ def unregister():
     bpy.utils.unregister_class(CP2U_PT_MatEditorPanel)
     bpy.utils.unregister_class(CP2U_PT_AddonPreferencesPanel)
     bpy.utils.unregister_class(CP2U_OT_InstallPyperclip)
+
+if __name__ == '__main__':
+    register()
