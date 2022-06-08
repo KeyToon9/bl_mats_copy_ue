@@ -45,7 +45,7 @@ class CP2U_OT_CopyMatNodesOperator(bpy.types.Operator):
         try:
             import pyperclip
 
-            mats_str = generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height)
+            mats_str = generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height, self)
             pyperclip.copy(mats_str)
             self.report({'INFO'}, "Copy to clipboard.")
         except ModuleNotFoundError:
