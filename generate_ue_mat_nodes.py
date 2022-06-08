@@ -14,6 +14,7 @@ NodeClassMap = {
     # Separate
     "SEPXYZ" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
     "SEPRGB" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
+    "GAMMA" : "/Script/Engine.MaterialExpressionPower",
     # Math Node Two Input
     "ADD" : "/Script/Engine.MaterialExpressionAdd",
     "SUBTRACT" : "/Script/Engine.MaterialExpressionSubtract",
@@ -61,6 +62,7 @@ NodeNameMap = {
     # Separate
     "SEPXYZ" : "MaterialExpressionMaterialFunctionCall",
     "SEPRGB" : "MaterialExpressionMaterialFunctionCall",
+    "GAMMA" : "MaterialExpressionPower",
     # Math Node Two Input
     "ADD" : "MaterialExpressionAdd",
     "SUBTRACT" : "MaterialExpressionSubtract",
@@ -467,8 +469,11 @@ Math_One_NodeClassMap = {
 	'TRUNC',
 }
 
-def _exp_math(node, linked_info):
-    op = node.operation
+def _exp_math(node, linked_info, force_op=None):
+    if force_op != None:
+        op = force_op
+    else:
+        op = node.operation
     exp = ''
     pin = ''
     exp_constants = []
@@ -576,8 +581,11 @@ Vect_Math_One_NodeClassMap = {
     'LENGTH' : "/Script/Engine.MaterialExpressionDistance",
 }
 
-def _exp_vect_math(node, linked_info):
-    op = node.operation
+def _exp_vect_math(node, linked_info, force_op=None):
+    if force_op != None:
+        op = force_op
+    else:
+        op = node.operation
 
     if op in Math_Two_NodeClassMap or op in Math_One_NodeClassMap:
         return _exp_math(node, linked_info)
@@ -734,6 +742,8 @@ def _gen_node_str(id, node) -> str:
         content = _exp_comb_xyz(node, linked_info)
     elif node.type == 'SEPXYZ' or node.type == 'SEPRGB':
         content = _exp_sep_xyz(node, linked_info)
+    elif node.type == 'GAMMA':
+        content = _exp_math(node, linked_info, 'POWER')
 
     node_expression += content["Value"]
     
@@ -775,7 +785,13 @@ def get_ue_mat_str(nodes, height, op=None):
 
     ue_mat_str = ''
     for idx, node in enumerate(nodes):
-        if node.type in NodeClassMap or node.operation in NodeClassMap:
+        operation = None
+        try:
+            operation = node.operation
+        except:
+            pass
+
+        if node.type in NodeClassMap or operation in NodeClassMap:
             ue_mat_str += _gen_node_str(idx, node)
         elif op:
             op.report({'WARNING'}, "%s is not supported, will be skipped."%(node.bl_idname))
