@@ -429,7 +429,7 @@ def _exp_sep_xyz(node, linked_info):
     for i, outputs in enumerate(linked_info['outputs_uuid']):
         links_pin_str = ''
         for j in range(1, len(outputs)):
-            links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][j][0], UUID=outputs[j])
+            links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][j-1][0], UUID=outputs[j])
         pin += PinTemplate.format(UUID=outputs[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
 
     return {"Value": exp, "Pin": pin, "Constant": exp_constants}
