@@ -1,4 +1,3 @@
-from os import link
 from random import random
 from typing import List
 import uuid
@@ -8,6 +7,13 @@ NodeClassMap = {
     "RGB" : "/Script/Engine.MaterialExpressionConstant4Vector",
     "RGBA" : "/Script/Engine.MaterialExpressionConstant4Vector",
     "VECTOR" : "/Script/Engine.MaterialExpressionConstant4Vector",
+    "VECT_TRANSFORM" : "/Script/Engine.MaterialExpressionTransform",
+    # Input
+    "UVMAP" : "/Script/Engine.MaterialExpressionTextureCoordinate",
+    "VERTEX_COLOR" : "/Script/Engine.MaterialExpressionVertexColor",
+    "OBJECT_INFO" : "/Script/Engine.MaterialExpressionObjectPositionWS",
+    "CAMERA" : "/Script/Engine.MaterialExpressionCameraVectorWS",
+    "_CAMERA_DEPTH" : "/Script/Engine.MaterialExpressionPixelDepth",
     # Combine
     "COMBXYZ" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
     "COMBRGB" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
@@ -56,6 +62,13 @@ NodeNameMap = {
     "RGB" : "MaterialExpressionConstant4Vector",
     "RGBA" : "MaterialExpressionConstant4Vector",
     "VECTOR" : "MaterialExpressionConstant4Vector",
+    "VECT_TRANSFORM" : "MaterialExpressionTransform",
+    # Input
+    "UVMAP" : "MaterialExpressionTextureCoordinate",
+    "VERTEX_COLOR" : "MaterialExpressionVertexColor",
+    "OBJECT_INFO" : "MaterialExpressionObjectPositionWS",
+    "CAMERA" : "MaterialExpressionCameraVectorWS",
+    "_CAMERA_DEPTH" : "MaterialExpressionPixelDepth",
     # Combine
     "COMBXYZ" : "MaterialExpressionMaterialFunctionCall",
     "COMBRGB" : "MaterialExpressionMaterialFunctionCall",
@@ -165,7 +178,7 @@ def _gen_linked_infos(id, node):
             # get current socket pin uuid
             pin_uuid = ''
             if not input in gl_node_socket_map:
-                uuid_name = 'input' + node.name + input.identifier
+                uuid_name = 'input' + node.type + node.name + input.identifier
                 pin_uuid = get_uuid(uuid_name)
                 gl_node_socket_map[input] = pin_uuid
             else:
@@ -208,7 +221,7 @@ def _gen_linked_infos(id, node):
             # get current socket pin uuid
             pin_uuid = ''
             if not output in gl_node_socket_map:
-                uuid_name = 'output' + node.name + output.identifier
+                uuid_name = 'output' + node.type + node.name + output.identifier
                 pin_uuid = get_uuid(uuid_name)
                 gl_node_socket_map[output] = pin_uuid
             else:
@@ -324,6 +337,250 @@ def _exp_value(node, linked_info):
                     links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
                 pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
         return { "Value": "\t\tR=%.6f\n"%(value), "Pin": pin, "Constant":[] }
+
+Transform_Source_Type = {
+    "WORLD" : "TRANSFORMSOURCE_World",
+    "OBJECT" : "TRANSFORMSOURCE_Local",
+    "CAMERA" : "TRANSFORMSOURCE_Camera"
+}
+
+Transform_Target_Type = {
+    "WORLD" : "TRANSFORM_World",
+    "OBJECT" : "TRANSFORM_Local",
+    "CAMERA" : "TRANSFORM_Camera"
+}
+
+def _exp_vec_transform(node, linked_info):
+    exp = ''
+    pin = ''
+    exp_constants = []
+
+    exp += "\t\tTransformSourceType=%s\n"%(Transform_Source_Type[node.convert_from])
+    exp += "\t\tTransformType=%s\n"%(Transform_Target_Type[node.convert_to])
+    for i, inputs in enumerate(linked_info['inputs_uuid']):
+        links_pin_str = ''
+
+        linkto_type = ''
+        linkto_graph = ''
+        linkto_node = ''
+
+        # if not connected, continue
+        if '_CONSTANT_' in linked_info['node_names'][0][i]:
+            continue
+        else:
+            linkto_type = linked_info['node_names'][0][i][2]
+            linkto_graph = linked_info['node_names'][0][i][0]
+            linkto_node = linked_info['node_names'][0][i][1]
+
+            for j in range(1, len(inputs)):
+                links_pin_str += LinkTemplate.format(Graph=linkto_graph, UUID=inputs[j])
+
+            pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+    
+        exp += FuncInputTemplate.format(int(i), FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
+    
+    if node.outputs[0].is_linked:
+        for output in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(output)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+            pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    return {"Value": exp, "Pin": pin, "Constant": exp_constants}
+
+def _internal_vect_transform(fromtype, totype, from_names, linkto_names, linkto_uuids, location):
+    type = 'VECT_TRANSFORM'
+    node_expression : str = ""
+
+    gragh_name = GlobalName.format(str(int(random()*3000) + int(random()*999)))
+    node_type = NodeNameMap[type]
+    object_name = node_type + '_' + str(int(random()*99))
+
+    NodeNameStr = NameOption.format(object_name)
+
+    #1 Head
+    node_expression = HeadTemplate.format(
+        ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
+        NameOption.format(from_names[0]))
+
+    #2 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        ClassOption.format(node_type),
+        NodeNameStr)
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #2 End
+
+    #3 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        "",
+        NodeNameStr)
+
+    node_expression += "\t\tTransformSourceType=%s\n"%(Transform_Source_Type[fromtype])
+    node_expression += "\t\tTransformType=%s\n"%(Transform_Target_Type[totype])
+    node_expression += InputTemplate.format("Input", from_names[2], from_names[0], from_names[1])
+    
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #3 End
+
+    node_expression += MatExpTemplate.format(node_type, object_name)
+    node_expression += NodePosTemplate.format(str(int(location.x-60)), str(int(gl_height - location.y)))
+
+    # CustomProperties
+    input_uuid = get_uuid('intput' + gragh_name + object_name)
+    output_uuid = get_uuid('output' + gragh_name + object_name)
+    
+    links_pin_str = LinkTemplate.format(Graph=gragh_name, UUID=output_uuid)
+    node_expression += PinTemplate.format(UUID=input_uuid, LinkStr=LinkedToTemplate.format(links_pin_str))
+
+    links_pin_str = ''
+    for i in range(1, len(linkto_uuids)):
+        links_pin_str += LinkTemplate.format(Graph=linkto_names[i-1][0], UUID=linkto_uuids[i])
+    node_expression += PinTemplate.format(UUID=linkto_uuids[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    node_expression += EndTemplate
+    #1 End
+
+    return node_expression, [gragh_name, object_name, node_type], input_uuid, output_uuid
+
+# todo:
+# figure out the index of uvmap in blender 
+# (we can only know the name of uvmap, but ue need index)
+def _exp_uvmap(node, linked_info):
+    exp = ''
+    pin = ''
+
+    for i, outputs in enumerate(linked_info['outputs_uuid']):
+        links_pin_str = ''
+        for j in range(1, len(outputs)):
+            links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][j-1][0], UUID=outputs[j])
+        pin += PinTemplate.format(UUID=outputs[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    return {"Value": exp, "Pin": pin, "Constant": []}
+
+# ue can only solve one vertex color
+def _exp_vertex_color(node, linked_info):
+    exp = ''
+    pin = ''
+    temp_pin = []
+
+    for i, outputs in enumerate(linked_info['outputs_uuid']):
+        links_pin_str = ''
+        for j in range(1, len(outputs)):
+            links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][j-1][0], UUID=outputs[j])
+        temp_pin.append(PinTemplate.format(UUID=outputs[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str)))
+    
+    insert_str = "\tCustomProperties Pin (PinId=%s,Direction=\"EGPD_Output\",)\n"%(get_uuid(str(linked_info['outputs_uuid'][0])))
+    for i in range(0, 3):
+        temp_pin.insert(i+1, insert_str)
+
+    for p in temp_pin:
+        pin += p
+
+    return {"Value": exp, "Pin": pin, "Constant": []}
+
+# Object Info node only have one valid socket: Location
+def _exp_objinfo(node, linked_info):
+    exp = ''
+    pin = ''
+
+    outputs = linked_info['outputs_uuid'][0]
+    links_pin_str = ''
+    for j in range(1, len(outputs)):
+        links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][j-1][0], UUID=outputs[j])
+    pin += PinTemplate.format(UUID=outputs[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    return {"Value": exp, "Pin": pin, "Constant": []}
+
+def _exp_single_output(linkto_names, linkto_uuids, type, location):
+    node_expression : str = ""
+
+    gragh_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
+    node_type = NodeNameMap[type]
+    object_name = node_type + '_' + str(int(random()*99))
+
+    NodeNameStr = NameOption.format(object_name)
+
+    #1 Head
+    node_expression = HeadTemplate.format(
+        ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
+        NameOption.format(gragh_name))
+
+    #2 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        ClassOption.format(node_type),
+        NodeNameStr)
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #2 End
+
+    #3 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        "",
+        NodeNameStr)
+
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #3 End
+
+    node_expression += MatExpTemplate.format(node_type, object_name)
+    node_expression += NodePosTemplate.format(str(int(location.x-60)), str(int(gl_height - location.y)))
+
+    # CustomProperties
+    links_pin_str = ''
+    for i, names in enumerate(linkto_names):
+        if i > len(linkto_uuids)-1:
+            break
+        links_pin_str += LinkTemplate.format(Graph=names[0], UUID=linkto_uuids[i+1])
+    node_expression += PinTemplate.format(UUID=linkto_uuids[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    node_expression += EndTemplate
+    #1 End
+
+    return node_expression
+
+def _exp_camera_vector(node, linked_info):
+    exp = ''
+    pin = ''
+    temp_pin = []
+    exp_content = []
+    
+    # todo: wrong impl, View Vector is Camera Vector in Camera Space
+    camera_vector_out = linked_info['outputs_uuid'][0]
+    links_pin_str = ''
+    cam_vec_out_names = []
+    for j in range(1, len(camera_vector_out)):
+        cam_vec_out_names.append(linked_info['node_names'][1].pop(0))
+
+    if len(linked_info['outputs_uuid'][0]) > 1:
+        t_exp, t_names, i_uuid, o_uuid = _internal_vect_transform('WORLD', 'CAMERA', _get_node_names(-1, node), cam_vec_out_names, camera_vector_out, node.location)
+        exp_content.append(t_exp)
+
+        # swtich output uuid and graph name
+        links_pin_str += LinkTemplate.format(Graph=_get_node_names(-1, node)[0], UUID=i_uuid)
+        pin += PinTemplate.format(UUID=o_uuid, LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    # View Z Depth connected
+    if len(linked_info['outputs_uuid'][1]) > 1:
+       exp_content.append(_exp_single_output(linked_info['node_names'][1], linked_info['outputs_uuid'][1], "_CAMERA_DEPTH", node.location))
+    
+    # todo: View Distance connected
+    # distance of point to camera position
+    # View Distance maybe need custom MF
+
+    for p in temp_pin:
+        pin += p
+
+    return {"Value": exp, "Pin": pin, "Constant": exp_content, "ReplaceNames": t_names}
+
+def _exp_texcoord(node,  linked_info):
+    # todo:
+    pass
 
 def _exp_comb_xyz(node, linked_info):
     MatFunction = "/Engine/Functions/Engine_MaterialFunctions02/Utility/MakeFloat4.MakeFloat4"
@@ -624,19 +881,9 @@ def _exp_vect_math(node, linked_info, force_op=None):
                 pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
             
             if i == 0:
-                if op == 'POWER':
-                    exp += InputTemplate.format("Base", linkto_type, linkto_graph, linkto_node)
-                elif op == 'ARCTAN2':
-                    exp += InputTemplate.format("Y", linkto_type, linkto_graph, linkto_node)
-                else:
-                    exp += InputTemplate.format("A", linkto_type, linkto_graph, linkto_node)
+                exp += InputTemplate.format("A", linkto_type, linkto_graph, linkto_node)
             else:
-                if op == 'POWER':
-                    exp += InputTemplate.format("Exponent", linkto_type, linkto_graph, linkto_node)
-                elif op == 'ARCTAN2':
-                    exp += InputTemplate.format("X", linkto_type, linkto_graph, linkto_node)
-                else:
-                    exp += InputTemplate.format("B", linkto_type, linkto_graph, linkto_node)
+                exp += InputTemplate.format("B", linkto_type, linkto_graph, linkto_node)
 
     elif op in Vect_Math_One_NodeClassMap:
         for i, inputs in enumerate(linked_info['inputs_uuid']):
@@ -696,9 +943,9 @@ def _exp_vect_math(node, linked_info, force_op=None):
 
     return {"Value": exp, "Pin": pin, "Constant": exp_constants}
 
-def _gen_node_str(id, node) -> str:
+def _gen_node_str(id, node, comment=None) -> str:
     node_expression : str = ""
-    # try:
+
     names = _get_node_names(id, node)
     gragh_name = names[0]
     object_name = names[1]
@@ -734,6 +981,17 @@ def _gen_node_str(id, node) -> str:
         content = _exp_rgb(node, linked_info)
     elif node.type == 'VALUE':
         content = _exp_value(node, linked_info)
+    elif node.type == 'VECT_TRANSFORM':
+        content = _exp_vec_transform(node, linked_info)
+    elif node.type == 'UVMAP':
+        content = _exp_uvmap(node, linked_info)
+    elif node.type == 'VERTEX_COLOR':
+        content = _exp_vertex_color(node, linked_info)
+    elif node.type == 'OBJECT_INFO':
+        content = _exp_objinfo(node, linked_info)
+    elif node.type == 'CAMERA':
+        content = _exp_camera_vector(node, linked_info)
+        node_expression = node_expression.replace(gragh_name, content["ReplaceNames"][0], 1)
     elif node.type == 'MATH':
         content = _exp_math(node, linked_info)
     elif node.type == 'VECT_MATH':
@@ -744,6 +1002,7 @@ def _gen_node_str(id, node) -> str:
         content = _exp_sep_xyz(node, linked_info)
     elif node.type == 'GAMMA':
         content = _exp_math(node, linked_info, 'POWER')
+        comment = "Gamma"
 
     node_expression += content["Value"]
     
@@ -755,17 +1014,16 @@ def _gen_node_str(id, node) -> str:
     node_expression += MatExpTemplate.format(node_type, object_name)
     node_expression += NodePosTemplate.format(str(int(node.location.x)), str(int(gl_height - node.location.y)))
 
+    # NodeComment
+    if comment != None:
+        node_expression += "\tbCommentBubbleVisible=True\n"
+        node_expression += "\tNodeComment=\"%s\"\n"%(comment)
+
     # CustomProperties
     node_expression += content['Pin']
 
     node_expression += EndTemplate
     #1 End
-    
-    # except KeyError as ke:
-    #     # todo: warning node type not surpport
-    #     print(str(ke) + node.get_type())
-    
-    # finally:
 
     for exp_constant in content["Constant"]:
         node_expression = exp_constant + node_expression
