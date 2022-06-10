@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from posixpath import split
+import site
 import sys
 import bpy, os
 from bpy.props import BoolProperty
@@ -131,7 +132,7 @@ class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
         
 
 def register():
-    bpy.utils.refresh_script_paths()
+    install.update_sys_path(site.getusersitepackages(), [])
     bpy.utils.register_class(CP2U_OT_CopyMatNodesOperator)
     bpy.utils.register_class(CP2U_PT_MatEditorPanel)
     bpy.utils.register_class(CP2U_OT_InstallPyperclip)

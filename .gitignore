@@ -1,4 +1,6 @@
 # folder
 __pycache__
 .vs
+.vscode
 test.txt
+temp

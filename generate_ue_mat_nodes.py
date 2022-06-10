@@ -2,11 +2,13 @@ from random import random
 from typing import List
 import uuid
 
+gl_nodes = []
+
 NodeClassMap = {
     "VALUE" : "/Script/Engine.MaterialExpressionConstant",
-    "RGB" : "/Script/Engine.MaterialExpressionConstant4Vector",
+    "RGB" : "/Script/Engine.MaterialExpressionConstant3Vector",
     "RGBA" : "/Script/Engine.MaterialExpressionConstant4Vector",
-    "VECTOR" : "/Script/Engine.MaterialExpressionConstant4Vector",
+    "VECTOR" : "/Script/Engine.MaterialExpressionConstant3Vector",
     "VECT_TRANSFORM" : "/Script/Engine.MaterialExpressionTransform",
     # Input
     "UVMAP" : "/Script/Engine.MaterialExpressionTextureCoordinate",
@@ -14,6 +16,9 @@ NodeClassMap = {
     "OBJECT_INFO" : "/Script/Engine.MaterialExpressionObjectPositionWS",
     "CAMERA" : "/Script/Engine.MaterialExpressionCameraVectorWS",
     "_CAMERA_DEPTH" : "/Script/Engine.MaterialExpressionPixelDepth",
+    "FRESNEL" : "/Script/Engine.MaterialExpressionCustom",
+    "_NORMALWS" : "/Script/Engine.MaterialExpressionPixelNormalWS",
+    "_CAMVECWS" : "/Script/Engine.MaterialExpressionCameraVectorWS",
     # Combine
     "COMBXYZ" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
     "COMBRGB" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
@@ -59,9 +64,9 @@ NodeClassMap = {
 NodeNameMap = {
     # Constant
     "VALUE" : "MaterialExpressionConstant",
-    "RGB" : "MaterialExpressionConstant4Vector",
+    "RGB" : "MaterialExpressionConstant3Vector",
     "RGBA" : "MaterialExpressionConstant4Vector",
-    "VECTOR" : "MaterialExpressionConstant4Vector",
+    "VECTOR" : "MaterialExpressionConstant3Vector",
     "VECT_TRANSFORM" : "MaterialExpressionTransform",
     # Input
     "UVMAP" : "MaterialExpressionTextureCoordinate",
@@ -69,6 +74,9 @@ NodeNameMap = {
     "OBJECT_INFO" : "MaterialExpressionObjectPositionWS",
     "CAMERA" : "MaterialExpressionCameraVectorWS",
     "_CAMERA_DEPTH" : "MaterialExpressionPixelDepth",
+    "FRESNEL" : "MaterialExpressionCustom",
+    "_NORMALWS" : "MaterialExpressionPixelNormalWS",
+    "_CAMVECWS" : "MaterialExpressionCameraVectorWS",
     # Combine
     "COMBXYZ" : "MaterialExpressionMaterialFunctionCall",
     "COMBRGB" : "MaterialExpressionMaterialFunctionCall",
@@ -121,6 +129,7 @@ NodePosTemplate = "\tNodePosX={}\n\tNodePosY={}\n"
 
 MatFuncTemplate = "\t\tMaterialFunction=MaterialFunction\'\"{}\"\'\n"
 FuncInputTemplate = "\t\tFunctionInputs({})=({})\n"
+CustomInputTemplate = "\t\tInputs({})=(InputName=\"{}\",{})\n"
 FuncExpInputTemplate = "{}=(Expression={}\'\"{}.{}\"\')"
 InputTemplate = "\t\t{}=(Expression={}\'\"{}.{}\"\')\n"
 MatContentExpTemplate = "Expression={Type}\'\"{Graph}.{Name}\"\'"
@@ -189,6 +198,8 @@ def _gen_linked_infos(id, node):
             # process input linked socket
             if input.is_linked:
                 for link in input.links:
+                    if not link.from_node in gl_nodes:
+                        continue
                     # get linked node info
                     to_node_names = []
                     if not link.from_node in gl_node_map:
@@ -230,6 +241,8 @@ def _gen_linked_infos(id, node):
 
             if output.is_linked:
                 for link in output.links:
+                    if not link.to_node in gl_nodes:
+                        continue
                     # get linked node info
                     to_node_names = []
                     if not link.to_node in gl_node_map:
@@ -289,12 +302,18 @@ def _exp_constant(type, value, linkto_names, linkto_uuid, location):
         NodeNameStr)
 
     # todo: change to swtich
-    if type == 'RGB' or type == 'RGBA':
+    if type == 'RGB':
         node_expression += "\t\tConstant=(R=%.6f,G=%.6f,B=%.6f,A=%.6f)\n"%tuple(value)
-    if type == 'VECTOR':
+    elif type == 'RGBA':
+        node_expression += "\t\tConstant=(R=%.6f,G=%.6f,B=%.6f,A=%.6f)\n"%tuple(value)
+    elif type == 'VECTOR':
         node_expression += "\t\tConstant=(R=%.6f,G=%.6f,B=%.6f,A=1.0)\n"%tuple(value)
-    if type == 'VALUE':
+    elif type == 'VALUE':
         node_expression += "\t\tR=%.6f\n"%(value)
+    elif type == '_NORMALWS':
+        pass
+    elif type == '_CAMVECWS':
+        pass
     
 
     node_expression += "\t"
@@ -578,7 +597,74 @@ def _exp_camera_vector(node, linked_info):
 
     return {"Value": exp, "Pin": pin, "Constant": exp_content, "ReplaceNames": t_names}
 
-def _exp_texcoord(node,  linked_info):
+def _exp_fresnel(node, linked_info):
+    exp = ''
+    pin = ''
+    exp_constants = []
+
+    exp += "\t\tCode=\"float Fraction = ((1-ior)*(1-ior)) / ((1+ior)*(1+ior));\\r\\n\\r\\nreturn Fraction + (1-Fraction)*pow(1-dot(camera_vector, normal), 5);\"\n"
+    exp += "\t\tOutputType=CMOT_Float1\n"
+    exp += "\t\tDescription=\"Fresnel_IOR\"\n"
+
+    for i, inputs in enumerate(linked_info['inputs_uuid']):
+        links_pin_str = ''
+
+        linkto_type = ''
+        linkto_graph = ''
+        linkto_node = ''
+        
+        input_name = ''
+        if i == 0:
+            input_name = 'ior'
+        else:
+            input_name = 'normal'
+
+        # if constant var, create a new node
+        if '_CONSTANT_' in linked_info['node_names'][0][i]:
+            _type = linked_info['node_names'][0][i]['_CONSTANT_']["Type"]
+            if i == 1:
+                _type = "_NORMALWS"
+            constant_str, constant_names, constant_uuid = _exp_constant(_type, 
+                                                        linked_info['node_names'][0][i]['_CONSTANT_']["Value"], 
+                                                        _get_node_names(-1, node), inputs[0], node.location)
+            exp_constants.append(constant_str)
+            linkto_graph = constant_names[0]
+            linkto_node = constant_names[1]
+            linkto_type = constant_names[2]
+
+            links_pin_str = LinkTemplate.format(Graph=constant_names[0], UUID=constant_uuid)
+            pin += PinTemplate.format(UUID=inputs[0] + ",PinName=\"%s\""%(input_name), LinkStr=LinkedToTemplate.format(links_pin_str))
+        else:
+            linkto_type = linked_info['node_names'][0][i][2]
+            linkto_graph = linked_info['node_names'][0][i][0]
+            linkto_node = linked_info['node_names'][0][i][1]
+
+            for j in range(1, len(inputs)):
+                links_pin_str += LinkTemplate.format(Graph=linkto_graph, UUID=inputs[j])
+
+            pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+
+        exp += CustomInputTemplate.format(int(i), input_name, FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
+    
+    # Camera Vector
+    input_uuid = get_uuid(_get_node_names(-1, node)[1] + "_CAMVECTOR")
+    constant_str, constant_names, constant_uuid = _exp_constant('_CAMVECWS', -1, _get_node_names(-1, node), input_uuid, node.location)
+
+    exp_constants.append(constant_str)
+    links_pin_str = LinkTemplate.format(Graph=constant_names[0], UUID=constant_uuid)
+    pin += PinTemplate.format(UUID=inputs[0] + ",PinName=\"%s\""%("camera_vector"), LinkStr=LinkedToTemplate.format(links_pin_str))
+    exp += CustomInputTemplate.format(int(2), "camera_vector", FuncExpInputTemplate.format("Input", constant_names[2], constant_names[0], constant_names[1]))
+
+    if node.outputs[0].is_linked:
+        for output in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(output)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+            pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+    
+    return {"Value": exp, "Pin": pin, "Constant": exp_constants}
+
+def _exp_texcoord(node, linked_info):
     # todo:
     pass
 
@@ -992,6 +1078,8 @@ def _gen_node_str(id, node, comment=None) -> str:
     elif node.type == 'CAMERA':
         content = _exp_camera_vector(node, linked_info)
         node_expression = node_expression.replace(gragh_name, content["ReplaceNames"][0], 1)
+    elif node.type == 'FRESNEL':
+        content = _exp_fresnel(node, linked_info)
     elif node.type == 'MATH':
         content = _exp_math(node, linked_info)
     elif node.type == 'VECT_MATH':
@@ -1035,6 +1123,9 @@ def get_ue_mat_str(nodes, height, op=None):
     global gl_node_map
     global gl_node_socket_map
     global gl_height
+    global gl_nodes
+
+    gl_nodes = nodes
 
     gl_uuid_namespace = uuid.uuid1()
     gl_node_map = {}
@@ -1053,6 +1144,8 @@ def get_ue_mat_str(nodes, height, op=None):
             ue_mat_str += _gen_node_str(idx, node)
         elif op:
             op.report({'WARNING'}, "%s is not supported, will be skipped."%(node.bl_idname))
+    
+    gl_nodes = []
     
     print(ue_mat_str)
     return ue_mat_str
