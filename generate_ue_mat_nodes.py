@@ -187,10 +187,10 @@ def _get_node_names(id, node) -> List[str]:
         elif node.operation in NodeClassMap:
             node_type = NodeNameMap[node.operation]
 
-        gragh_name = GlobalName.format(str(id))
+        graph_name = GlobalName.format(str(id))
         node_name = node_type + '_' + str(id)
 
-        gl_node_map[node] = [gragh_name, node_name, node_type].copy()
+        gl_node_map[node] = [graph_name, node_name, node_type].copy()
 
     return gl_node_map[node]
 
@@ -307,7 +307,7 @@ def _gen_linked_infos(id, node):
 def _exp_constant(type, value, linkto_names, linkto_uuid, location):
     node_expression : str = ""
 
-    gragh_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
+    graph_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
     node_type = NodeNameMap[type]
     object_name = node_type + '_' + str(int(random()*99))
 
@@ -316,7 +316,7 @@ def _exp_constant(type, value, linkto_names, linkto_uuid, location):
     #1 Head
     node_expression = HeadTemplate.format(
         ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
-        NameOption.format(gragh_name))
+        NameOption.format(graph_name))
 
     #2 Head
     node_expression += "\t"
@@ -354,14 +354,14 @@ def _exp_constant(type, value, linkto_names, linkto_uuid, location):
     node_expression += NodePosTemplate.format(str(int(location.x-60)), str(int(gl_height - location.y)))
 
     # CustomProperties
-    output_uuid = get_uuid(gragh_name + object_name)
+    output_uuid = get_uuid(graph_name + object_name)
     links_pin_str = LinkTemplate.format(Graph=linkto_names[0], UUID=linkto_uuid)
     node_expression += PinTemplate.format(UUID=output_uuid, LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
 
     node_expression += EndTemplate
     #1 End
 
-    return node_expression, [gragh_name, object_name, node_type], output_uuid
+    return node_expression, [graph_name, object_name, node_type], output_uuid
 
 def _exp_rgb(node, linked_info):
     # if not node.get_out_nodes()[0].is_linked:
@@ -456,7 +456,7 @@ def _exp_vec_transform(node, linked_info):
 def _internal_vect_transform(type, fromtype, totype, from_names, linkto_names, linkto_uuids, location):
     node_expression : str = ""
 
-    gragh_name = GlobalName.format(str(int(random()*3000) + int(random()*999)))
+    graph_name = GlobalName.format(str(int(random()*3000) + int(random()*999)))
     node_type = NodeNameMap[type]
     object_name = node_type + '_' + str(int(random()*99))
 
@@ -498,10 +498,10 @@ def _internal_vect_transform(type, fromtype, totype, from_names, linkto_names, l
     node_expression += NodePosTemplate.format(str(int(location.x-60)), str(int(gl_height - location.y)))
 
     # CustomProperties
-    input_uuid = get_uuid('intput' + gragh_name + object_name)
-    output_uuid = get_uuid('output' + gragh_name + object_name)
+    input_uuid = get_uuid('intput' + graph_name + object_name)
+    output_uuid = get_uuid('output' + graph_name + object_name)
     
-    links_pin_str = LinkTemplate.format(Graph=gragh_name, UUID=output_uuid)
+    links_pin_str = LinkTemplate.format(Graph=graph_name, UUID=output_uuid)
     node_expression += PinTemplate.format(UUID=input_uuid, LinkStr=LinkedToTemplate.format(links_pin_str))
 
     links_pin_str = ''
@@ -512,7 +512,7 @@ def _internal_vect_transform(type, fromtype, totype, from_names, linkto_names, l
     node_expression += EndTemplate
     #1 End
 
-    return node_expression, [gragh_name, object_name, node_type], input_uuid, output_uuid
+    return node_expression, [graph_name, object_name, node_type], input_uuid, output_uuid
 
 # todo:
 # figure out the index of uvmap in blender 
@@ -567,7 +567,7 @@ def _exp_objinfo(node, linked_info):
 def _exp_single_output(linkto_names, linkto_uuids, type, location, index = 0, use_transform = False, transform_type = "", from_type = "", to_type = ""):
     node_expression : str = ""
 
-    gragh_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
+    graph_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
     node_type = NodeNameMap[type]
     object_name = node_type + '_' + str(int(random()*99))
 
@@ -576,7 +576,7 @@ def _exp_single_output(linkto_names, linkto_uuids, type, location, index = 0, us
     #1 Head
     node_expression = HeadTemplate.format(
         ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
-        NameOption.format(gragh_name))
+        NameOption.format(graph_name))
 
     #2 Head
     node_expression += "\t"
@@ -609,11 +609,11 @@ def _exp_single_output(linkto_names, linkto_uuids, type, location, index = 0, us
         links_num = len(linkto_uuids)-1
         for i in range(index, index+links_num):
             t_linkto_names.append(linkto_names[i])
-        t_exp, t_names, i_uuid, o_uuid = _internal_vect_transform(transform_type, from_type, to_type, [gragh_name, object_name, node_type], t_linkto_names, linkto_uuids, location)
+        t_exp, t_names, i_uuid, o_uuid = _internal_vect_transform(transform_type, from_type, to_type, [graph_name, object_name, node_type], t_linkto_names, linkto_uuids, location)
         links_pin_str = LinkTemplate.format(Graph=t_names[0], UUID=i_uuid)
         node_expression += PinTemplate.format(UUID=o_uuid, LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
-        node_expression = node_expression.replace(gragh_name, t_names[0], 1)
-        gragh_name = t_names[0]
+        node_expression = node_expression.replace(graph_name, t_names[0], 1)
+        graph_name = t_names[0]
     else:
         links_pin_str = ''
         links_num = len(linkto_uuids)-1
@@ -624,7 +624,7 @@ def _exp_single_output(linkto_names, linkto_uuids, type, location, index = 0, us
     node_expression += EndTemplate
     #1 End
     node_expression = t_exp + node_expression
-    return node_expression, [gragh_name, linkto_uuids[0]] # change output linked pin info
+    return node_expression, [graph_name, linkto_uuids[0]] # change output linked pin info
 
 def _exp_camera_vector(node, linked_info):
     exp = ''
@@ -733,10 +733,10 @@ def _exp_texcoord(node, linked_info):
     
     return {"Value": exp, "Pin": pin, "Constant": exp_content, "Replace": replace}
 
-def _exp_incomming(graph_name, linkto_names, linkto_uuids, location, index):
+def _exp_incomming(graph, linkto_names, linkto_uuids, location, index):
     node_expression : str = ""
 
-    gragh_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
+    graph_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
     node_type = NodeNameMap["_INCOMMING"]
     object_name = node_type + '_' + str(int(random()*99))
 
@@ -745,7 +745,7 @@ def _exp_incomming(graph_name, linkto_names, linkto_uuids, location, index):
     #1 Head
     node_expression = HeadTemplate.format(
         ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
-        NameOption.format(gragh_name))
+        NameOption.format(graph_name))
 
     #2 Head
     node_expression += "\t"
@@ -756,11 +756,11 @@ def _exp_incomming(graph_name, linkto_names, linkto_uuids, location, index):
     node_expression += EndTemplate
     #2 End
 
-    campos_input_uuid = get_uuid(graph_name + "_incomming_camera_position")
-    pixpos_input_uuid = get_uuid(graph_name + "_incomming_pixel_position")
+    campos_input_uuid = get_uuid(graph + "_incomming_camera_position")
+    pixpos_input_uuid = get_uuid(graph + "_incomming_pixel_position")
 
-    constant_str_1, constant_names_1, constant_uuid_1 = _exp_constant("_CAMERA_POS", -1, [gragh_name, object_name, node_type], campos_input_uuid, location)
-    constant_str_2, constant_names_2, constant_uuid_2 = _exp_constant("_OBJ_POS", -1, [gragh_name, object_name, node_type], pixpos_input_uuid, location)
+    constant_str_1, constant_names_1, constant_uuid_1 = _exp_constant("_CAMERA_POS", -1, [graph_name, object_name, node_type], campos_input_uuid, location)
+    constant_str_2, constant_names_2, constant_uuid_2 = _exp_constant("_OBJ_POS", -1, [graph_name, object_name, node_type], pixpos_input_uuid, location)
 
     #3 Head
     node_expression += "\t"
@@ -800,7 +800,7 @@ def _exp_incomming(graph_name, linkto_names, linkto_uuids, location, index):
     node_expression = constant_str_2 + node_expression
     node_expression = constant_str_1 + node_expression
 
-    return node_expression, [gragh_name, linkto_uuids[0]]
+    return node_expression, [graph_name, linkto_uuids[0]]
 
 def _exp_geometry(node, linked_info):
     exp = ''
@@ -1285,7 +1285,7 @@ def _gen_node_str(id, node, comment=None) -> str:
     node_expression : str = ""
 
     names = _get_node_names(id, node)
-    gragh_name = names[0]
+    graph_name = names[0]
     object_name = names[1]
     node_type = names[2]
 
@@ -1294,7 +1294,7 @@ def _gen_node_str(id, node, comment=None) -> str:
     #1 Head
     node_expression = HeadTemplate.format(
         ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
-        NameOption.format(gragh_name))
+        NameOption.format(graph_name))
 
     #2 Head
     node_expression += "\t"
@@ -1331,7 +1331,7 @@ def _gen_node_str(id, node, comment=None) -> str:
     elif node.type == 'CAMERA':
         content = _exp_camera_vector(node, linked_info)
         if content["InsertNames"]:
-            node_expression = node_expression.replace(gragh_name, content["InsertNames"][0], 1)
+            node_expression = node_expression.replace(graph_name, content["InsertNames"][0], 1)
     elif node.type == 'TEX_COORD':
         content = _exp_texcoord(node, linked_info)
     elif node.type == 'NEW_GEOMETRY':
