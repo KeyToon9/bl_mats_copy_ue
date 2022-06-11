@@ -27,6 +27,13 @@ NodeClassMap = {
     "_OBJ_POS" : "/Script/Engine.MaterialExpressionWorldPosition",
     "_CAM_POS" : "/Script/Engine.MaterialExpressionWorldPosition",
     "_WIN_POS" : "/Script/Engine.MaterialExpressionScreenPosition",
+    # Geometry
+    "NEW_GEOMETRY" : "/Script/Engine.MaterialExpressionWorldPosition",
+    "_NORMALWS" : "/Script/Engine.MaterialExpressionPixelNormalWS",
+    "_TANGENTWS" : "/Script/Engine.MaterialExpressionVertexTangentWS",
+    "_VERTEX_NORMAlWS" : "/Script/Engine.MaterialExpressionVertexNormalWS",
+    "_INCOMMING" : "/Script/Engine.MaterialExpressionCustom",
+    "_CAMERA_POS" : "/Script/Engine.MaterialExpressionCameraPositionWS",
     # Combine
     "COMBXYZ" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
     "COMBRGB" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
@@ -93,6 +100,13 @@ NodeNameMap = {
     "_OBJ_POS" : "MaterialExpressionWorldPosition",
     "_CAM_POS" : "MaterialExpressionWorldPosition",
     "_WIN_POS" : "MaterialExpressionScreenPosition",
+    # Geometry
+    "NEW_GEOMETRY" : "MaterialExpressionWorldPosition",
+    #"_NORMALWS" : "MaterialExpressionPixelNormalWS",
+    "_TANGENTWS" : "MaterialExpressionVertexTangentWS",
+    "_VERTEX_NORMAlWS" : "MaterialExpressionVertexNormalWS",
+    "_INCOMMING" : "MaterialExpressionCustom",
+    "_CAMERA_POS" : "MaterialExpressionCameraPositionWS",
     # Combine
     "COMBXYZ" : "MaterialExpressionMaterialFunctionCall",
     "COMBRGB" : "MaterialExpressionMaterialFunctionCall",
@@ -328,9 +342,7 @@ def _exp_constant(type, value, linkto_names, linkto_uuid, location):
         node_expression += "\t\tConstant=(R=%.6f,G=%.6f,B=%.6f,A=1.0)\n"%tuple(value)
     elif type == 'VALUE':
         node_expression += "\t\tR=%.6f\n"%(value)
-    elif type == '_NORMALWS':
-        pass
-    elif type == '_CAMVECWS':
+    elif type == '_NORMALWS' or type == '_CAMVECWS' or type == '_CAMERA_POS' or type == '_OBJ_POS':
         pass
     
 
@@ -719,6 +731,126 @@ def _exp_texcoord(node, linked_info):
     
     # todo: relection
     
+    return {"Value": exp, "Pin": pin, "Constant": exp_content, "Replace": replace}
+
+def _exp_incomming(graph_name, linkto_names, linkto_uuids, location, index):
+    node_expression : str = ""
+
+    gragh_name = GlobalName.format(str(int(random()*1000) + int(random()*999)))
+    node_type = NodeNameMap["_INCOMMING"]
+    object_name = node_type + '_' + str(int(random()*99))
+
+    NodeNameStr = NameOption.format(object_name)
+
+    #1 Head
+    node_expression = HeadTemplate.format(
+        ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
+        NameOption.format(gragh_name))
+
+    #2 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        ClassOption.format(node_type),
+        NodeNameStr)
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #2 End
+
+    campos_input_uuid = get_uuid(graph_name + "_incomming_camera_position")
+    pixpos_input_uuid = get_uuid(graph_name + "_incomming_pixel_position")
+
+    constant_str_1, constant_names_1, constant_uuid_1 = _exp_constant("_CAMERA_POS", -1, [gragh_name, object_name, node_type], campos_input_uuid, location)
+    constant_str_2, constant_names_2, constant_uuid_2 = _exp_constant("_OBJ_POS", -1, [gragh_name, object_name, node_type], pixpos_input_uuid, location)
+
+    #3 Head
+    node_expression += "\t"
+    node_expression += HeadTemplate.format(
+        "",
+        NodeNameStr)
+
+    node_expression += "\t\tCode=\"return normalize(camera_position - pixel_position);\"\n"
+    node_expression += "\t\tDescription=\"Geometry_incomming\"\n"
+
+    node_expression += CustomInputTemplate.format(0, "camera_position", FuncExpInputTemplate.format("Input", constant_names_1[2], constant_names_1[0], constant_names_1[1]))
+    node_expression += CustomInputTemplate.format(1, "pixel_position", FuncExpInputTemplate.format("Input", constant_names_2[2], constant_names_2[0], constant_names_2[1]))
+
+    node_expression += "\t"
+    node_expression += EndTemplate
+    #3 End
+
+    node_expression += MatExpTemplate.format(node_type, object_name)
+    node_expression += NodePosTemplate.format(str(int(location.x-60)), str(int(gl_height - location.y)))
+
+    # input
+    links_pin_str = LinkTemplate.format(Graph=constant_names_1[0], UUID=constant_uuid_1)
+    node_expression += PinTemplate.format(UUID=campos_input_uuid + ",PinName=\"%s\""%("camera_position"), LinkStr=LinkedToTemplate.format(links_pin_str))
+    links_pin_str = LinkTemplate.format(Graph=constant_names_2[0], UUID=constant_uuid_2)
+    node_expression += PinTemplate.format(UUID=campos_input_uuid + ",PinName=\"%s\""%("pixel_position"), LinkStr=LinkedToTemplate.format(links_pin_str))
+
+    # output
+    links_pin_str = ''
+    links_num = len(linkto_uuids)-1
+    for i in range(index, index+links_num):
+        links_pin_str += LinkTemplate.format(Graph=linkto_names[i][0], UUID=linkto_uuids[i-index])
+    node_expression += PinTemplate.format(UUID=linkto_uuids[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    node_expression += EndTemplate
+    #1 End
+
+    node_expression = constant_str_2 + node_expression
+    node_expression = constant_str_1 + node_expression
+
+    return node_expression, [gragh_name, linkto_uuids[0]]
+
+def _exp_geometry(node, linked_info):
+    exp = ''
+    pin = ''
+    exp_content = []
+    replace = []
+
+    outputs = linked_info['outputs_uuid'][0]
+    if len(outputs) > 1:
+        links_pin_str = ''
+        for j in range(1, len(outputs)):
+            links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][j-1][0], UUID=outputs[j])
+        pin += PinTemplate.format(UUID=outputs[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+    
+    # normal
+    name_index = len(linked_info['outputs_uuid'][0])-1
+    if len(linked_info['outputs_uuid'][1]) > 1:
+        t_exp, t_replace = _exp_single_output(linked_info['node_names'][1], linked_info['outputs_uuid'][1], "_NORMALWS", node.location, name_index)
+        t_replace.insert(0, _get_node_names(-1, node)[0])
+
+        replace.append(t_replace)
+        exp_content.append(t_exp)
+    
+    # tangent
+    name_index += len(linked_info['outputs_uuid'][1])-1
+    if len(linked_info['outputs_uuid'][2]) > 1:
+        t_exp, t_replace = _exp_single_output(linked_info['node_names'][1], linked_info['outputs_uuid'][2], "_TANGENTWS", node.location, name_index)
+        t_replace.insert(0, _get_node_names(-1, node)[0])
+
+        replace.append(t_replace)
+        exp_content.append(t_exp)
+    
+    # true normal
+    name_index += len(linked_info['outputs_uuid'][2])-1
+    if len(linked_info['outputs_uuid'][3]) > 1:
+        t_exp, t_replace = _exp_single_output(linked_info['node_names'][1], linked_info['outputs_uuid'][3], "_VERTEX_NORMAlWS", node.location, name_index)
+        t_replace.insert(0, _get_node_names(-1, node)[0])
+
+        replace.append(t_replace)
+        exp_content.append(t_exp)
+
+    # incomming
+    name_index += len(linked_info['outputs_uuid'][3])-1
+    if len(linked_info['outputs_uuid'][4]) > 1:
+        t_exp, t_replace = _exp_incomming(_get_node_names(-1, node)[0], linked_info['node_names'][1], linked_info['outputs_uuid'][4], node.location, name_index)
+        t_replace.insert(0, _get_node_names(-1, node)[0])
+
+        replace.append(t_replace)
+        exp_content.append(t_exp)
+
     return {"Value": exp, "Pin": pin, "Constant": exp_content, "Replace": replace}
 
 def _exp_fresnel(node, linked_info):
@@ -1202,6 +1334,8 @@ def _gen_node_str(id, node, comment=None) -> str:
             node_expression = node_expression.replace(gragh_name, content["InsertNames"][0], 1)
     elif node.type == 'TEX_COORD':
         content = _exp_texcoord(node, linked_info)
+    elif node.type == 'NEW_GEOMETRY':
+        content = _exp_geometry(node, linked_info)
     elif node.type == 'FRESNEL':
         content = _exp_fresnel(node, linked_info)
     elif node.type == 'MATH':
