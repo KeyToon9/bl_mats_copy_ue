@@ -10,6 +10,7 @@ bl_mats_copy_ue is an add-on for copying Blender material nodes to UnrealEngine.
 Download the add_on and extract to your blender addons folder, or you can just install in Blender with zip file.
 
 ## Usage
+Go to Blender -> Edit -> Preferences -> Add-ons: Search "copy", find the "Material Nodes Copy to UE" add-on, click the "Install Pyperclip" button.
 
 Select shader nodes what you want to paste to Unreal material, find "CP" in Shader Node Editor Panel. 
 
