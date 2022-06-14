@@ -2,152 +2,10 @@ from random import random
 from typing import List
 import uuid
 
+from .node_map import NodeClassMap
+from .node_map import NodeNameMap
+
 gl_nodes = []
-
-NodeClassMap = {
-    "VALUE" : "/Script/Engine.MaterialExpressionConstant",
-    "RGB" : "/Script/Engine.MaterialExpressionConstant3Vector",
-    "RGBA" : "/Script/Engine.MaterialExpressionConstant4Vector",
-    "VECTOR" : "/Script/Engine.MaterialExpressionConstant3Vector",
-    "VECT_TRANSFORM" : "/Script/Engine.MaterialExpressionTransform",
-    "_POINT_TRANSFORM" : "/Script/Engine.MaterialExpressionTransformPosition",
-    # Input
-    "UVMAP" : "/Script/Engine.MaterialExpressionTextureCoordinate",
-    "VERTEX_COLOR" : "/Script/Engine.MaterialExpressionVertexColor",
-    "OBJECT_INFO" : "/Script/Engine.MaterialExpressionObjectPositionWS",
-    "CAMERA" : "/Script/Engine.MaterialExpressionCameraVectorWS",
-    "_CAMERA_DEPTH" : "/Script/Engine.MaterialExpressionPixelDepth",
-    "FRESNEL" : "/Script/Engine.MaterialExpressionCustom",
-    "_NORMALWS" : "/Script/Engine.MaterialExpressionPixelNormalWS",
-    "_CAMVECWS" : "/Script/Engine.MaterialExpressionCameraVectorWS",
-    # Texture coordinate
-    "TEX_COORD" : "/Script/Engine.MaterialExpressionTextureCoordinate",
-    "_NORMALOS" : "/Script/Engine.MaterialExpressionPixelNormalWS",
-    "_UV" : "/Script/Engine.MaterialExpressionTextureCoordinate",
-    "_OBJ_POS" : "/Script/Engine.MaterialExpressionWorldPosition",
-    "_CAM_POS" : "/Script/Engine.MaterialExpressionWorldPosition",
-    "_WIN_POS" : "/Script/Engine.MaterialExpressionScreenPosition",
-    # Geometry
-    "NEW_GEOMETRY" : "/Script/Engine.MaterialExpressionWorldPosition",
-    "_NORMALWS" : "/Script/Engine.MaterialExpressionPixelNormalWS",
-    "_TANGENTWS" : "/Script/Engine.MaterialExpressionVertexTangentWS",
-    "_VERTEX_NORMAlWS" : "/Script/Engine.MaterialExpressionVertexNormalWS",
-    "_INCOMMING" : "/Script/Engine.MaterialExpressionCustom",
-    "_CAMERA_POS" : "/Script/Engine.MaterialExpressionCameraPositionWS",
-    # Combine
-    "COMBXYZ" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
-    "COMBRGB" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
-    # Separate
-    "SEPXYZ" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
-    "SEPRGB" : "/Script/Engine.MaterialExpressionMaterialFunctionCall",
-    "GAMMA" : "/Script/Engine.MaterialExpressionPower",
-    # Math Node Two Input
-    "ADD" : "/Script/Engine.MaterialExpressionAdd",
-    "SUBTRACT" : "/Script/Engine.MaterialExpressionSubtract",
-    "MULTIPLY" : "/Script/Engine.MaterialExpressionMultiply",
-    "DIVIDE" : "/Script/Engine.MaterialExpressionDivide",
-    "POWER" : "/Script/Engine.MaterialExpressionPower",
-    "MINIMUM" : "/Script/Engine.MaterialExpressionMin",
-    "MAXIMUM" : "/Script/Engine.MaterialExpressionMax",
-    "MODULO" : "/Script/Engine.MaterialExpressionFmod",
-    "ARCTAN2" : "/Script/Engine.MaterialExpressionArctangent2Fast",
-    # Math Node One Input
-    "SQRT" : "/Script/Engine.MaterialExpressionSquareRoot",
-	"ABSOLUTE" : "/Script/Engine.MaterialExpressionAbs",
-	"ROUND" : "/Script/Engine.MaterialExpressionRound",
-	"FLOOR" : "/Script/Engine.MaterialExpressionFloor",
-	"CEIL" : "/Script/Engine.MaterialExpressionCeil",
-	"FRACT" : "/Script/Engine.MaterialExpressionFrac",
-	"SINE" : "/Script/Engine.MaterialExpressionSine",
-	"COSINE" : "/Script/Engine.MaterialExpressionCosine",
-	"TANGENT" : "/Script/Engine.MaterialExpressionTangent",
-	"ARCSINE" : "/Script/Engine.MaterialExpressionArcsineFast",
-	'ARCCOSINE': "/Script/Engine.MaterialExpressionArccosineFast",
-	"ARCTANGENT" : "/Script/Engine.MaterialExpressionArctangentFast",
-	"SIGN" : "/Script/Engine.MaterialExpressionSign",
-	"TRUNC" : "/Script/Engine.MaterialExpressionTruncate",
-    # Vector Math Two Input
-    "CROSS_PRODUCT" : "/Script/Engine.MaterialExpressionCrossProduct",
-    "DOT_PRODUCT": "/Script/Engine.MaterialExpressionDotProduct",
-    "DISTANCE" : "/Script/Engine.MaterialExpressionDistance",
-    "SCALE" : "/Script/Engine.MaterialExpressionMultiply",
-    # Vector Math One Input
-    "NORMALIZE" : "/Script/Engine.MaterialExpressionNormalize",
-    "LENGTH" : "/Script/Engine.MaterialExpressionDistance",
-}
-
-NodeNameMap = {
-    # Constant
-    "VALUE" : "MaterialExpressionConstant",
-    "RGB" : "MaterialExpressionConstant3Vector",
-    "RGBA" : "MaterialExpressionConstant4Vector",
-    "VECTOR" : "MaterialExpressionConstant3Vector",
-    "VECT_TRANSFORM" : "MaterialExpressionTransform",
-    "_POINT_TRANSFORM" : "MaterialExpressionTransformPosition",
-    # Input
-    "UVMAP" : "MaterialExpressionTextureCoordinate",
-    "VERTEX_COLOR" : "MaterialExpressionVertexColor",
-    "OBJECT_INFO" : "MaterialExpressionObjectPositionWS",
-    "CAMERA" : "MaterialExpressionCameraVectorWS",
-    "_CAMERA_DEPTH" : "MaterialExpressionPixelDepth",
-    "FRESNEL" : "MaterialExpressionCustom",
-    "_NORMALWS" : "MaterialExpressionPixelNormalWS",
-    "_CAMVECWS" : "MaterialExpressionCameraVectorWS",
-    # Texture coordinate
-    "TEX_COORD" : "MaterialExpressionTextureCoordinate",
-    "_NORMALOS" : "MaterialExpressionPixelNormalWS",
-    "_UV" : "MaterialExpressionTextureCoordinate",
-    "_OBJ_POS" : "MaterialExpressionWorldPosition",
-    "_CAM_POS" : "MaterialExpressionWorldPosition",
-    "_WIN_POS" : "MaterialExpressionScreenPosition",
-    # Geometry
-    "NEW_GEOMETRY" : "MaterialExpressionWorldPosition",
-    #"_NORMALWS" : "MaterialExpressionPixelNormalWS",
-    "_TANGENTWS" : "MaterialExpressionVertexTangentWS",
-    "_VERTEX_NORMAlWS" : "MaterialExpressionVertexNormalWS",
-    "_INCOMMING" : "MaterialExpressionCustom",
-    "_CAMERA_POS" : "MaterialExpressionCameraPositionWS",
-    # Combine
-    "COMBXYZ" : "MaterialExpressionMaterialFunctionCall",
-    "COMBRGB" : "MaterialExpressionMaterialFunctionCall",
-    # Separate
-    "SEPXYZ" : "MaterialExpressionMaterialFunctionCall",
-    "SEPRGB" : "MaterialExpressionMaterialFunctionCall",
-    "GAMMA" : "MaterialExpressionPower",
-    # Math Node Two Input
-    "ADD" : "MaterialExpressionAdd",
-    "SUBTRACT" : "MaterialExpressionSubtract",
-    "MULTIPLY" : "MaterialExpressionMultiply",
-    "DIVIDE" : "MaterialExpressionDivide",
-    "POWER" : "MaterialExpressionPower",
-    "MINIMUM" : "MaterialExpressionMin",
-    "MAXIMUM" : "MaterialExpressionMax",
-    "MODULO" : "MaterialExpressionFmod",
-    "ARCTAN2" : "MaterialExpressionArctangent2Fast",
-    # Math Node One Input
-    "SQRT": "MaterialExpressionSquareRoot",
-	"ABSOLUTE": "MaterialExpressionAbs",
-	"ROUND": "MaterialExpressionRound",
-	"FLOOR": "MaterialExpressionFloor",
-	"CEIL": "MaterialExpressionCeil",
-	"FRACT": "MaterialExpressionFrac",
-	"SINE": "MaterialExpressionSine",
-	"COSINE": "MaterialExpressionCosine",
-	"TANGENT": "MaterialExpressionTangent",
-	"ARCSINE": "MaterialExpressionArcsineFast",
-	"ARCCOSINE": "MaterialExpressionArccosineFast",
-	"ARCTANGENT": "MaterialExpressionArctangentFast",
-	"SIGN": "MaterialExpressionSign",
-	"TRUNC": "MaterialExpressionTruncate",
-    # Vector Math Two Input
-    "CROSS_PRODUCT" : "MaterialExpressionCrossProduct",
-    "DOT_PRODUCT": "MaterialExpressionDotProduct",
-    "DISTANCE" : "MaterialExpressionDistance",
-    "SCALE" : "MaterialExpressionMultiply",
-    # Vector Math One Input
-    "NORMALIZE" : "MaterialExpressionNormalize",
-    "LENGTH" : "MaterialExpressionDistance",
-}
 
 GlobalName = "MaterialGraphNode_{}"
 ClassOption = "Class={}"
@@ -189,6 +47,10 @@ def _get_node_names(id, node) -> List[str]:
 
         graph_name = GlobalName.format(str(id))
         node_name = node_type + '_' + str(id)
+        
+        if node.type == "REROUTE":
+            insert_index = graph_name.find("_")
+            graph_name = graph_name[:insert_index] + "_Knot" + graph_name[insert_index:]
 
         gl_node_map[node] = [graph_name, node_name, node_type].copy()
 
@@ -231,6 +93,7 @@ def _gen_linked_infos(id, node):
             if input.is_linked:
                 for link in input.links:
                     if not link.from_node in gl_nodes:
+                        ret_in_node_names.append({'_CONSTANT_' : {"Type": input.type, "Value": input.default_value}})
                         continue
                     # get linked node info
                     to_node_names = []
@@ -303,7 +166,23 @@ def _gen_linked_infos(id, node):
     # print(ret_input_pins_uuid)
     # print(ret_output_pins_uuid)
     return {'node_names': [ret_in_node_names, ret_out_node_names], 'inputs_uuid': ret_input_pins_uuid, 'outputs_uuid': ret_output_pins_uuid}
-                
+
+def _exp_reroute(node, linked_info):
+    pin = ""
+    if node.inputs[0].is_linked:
+        for input in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(input)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=input[i])
+            pin += PinTemplate.format(UUID=input[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+    if node.outputs[0].is_linked:
+        for output in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(output)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+            pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+    return { "Value": "", "Pin": pin, "Constant":[], "Replace": [] }
+
 def _exp_constant(type, value, linkto_names, linkto_uuid, location):
     node_expression : str = ""
 
@@ -377,15 +256,15 @@ def _exp_rgb(node, linked_info):
 
 def _exp_value(node, linked_info):
     # if not node.get_out_nodes()[0].is_linked:
-        value = node.outputs[0].default_value
-        pin = ""
-        if node.outputs[0].is_linked:
-            for output in linked_info['outputs_uuid']:
-                links_pin_str = ''
-                for i in range(1, len(output)):
-                    links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
-                pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
-        return { "Value": "\t\tR=%.6f\n"%(value), "Pin": pin, "Constant":[], "Replace": [] }
+    value = node.outputs[0].default_value
+    pin = ""
+    if node.outputs[0].is_linked:
+        for output in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(output)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+            pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+    return { "Value": "\t\tR=%.6f\n"%(value), "Pin": pin, "Constant":[], "Replace": [] }
 
 Transform_Source_Type = {
     "WORLD" : "TRANSFORMSOURCE_World",
@@ -853,6 +732,147 @@ def _exp_geometry(node, linked_info):
 
     return {"Value": exp, "Pin": pin, "Constant": exp_content, "Replace": replace}
 
+# https://en.wikipedia.org/wiki/Blend_modes
+# you can find the algorithm on https://github.com/blender/blender/blob/master/source/blender/blenkernel/intern/material.c#L1592
+# https://www.deepskycolors.com/archivo/2010/04/21/formulas-for-Photoshop-blending-modes.html
+# some color convert code on https://www.chilliant.com/rgb2hsv.html also ue official custom node
+convert_func_code = "\
+struct Functions\\n\
+{\\n\
+\\tfloat3 rgb_to_hsv(float3 c)\\n\
+\\t{\\n\
+\\t\\tfloat4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);\\n\
+\\t\\tfloat4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));\\n\
+\\t\\tfloat4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));\\n\
+\\t\\tfloat d = q.x - min(q.w, q.y);\\n\
+\\t\\tfloat e = .0000001;\\n\
+\\t\\treturn float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);\\n\
+\\t}\\n\
+\\tfloat3 hsv_to_rgb(float3 hsv)\\n\
+\\t{\\n\
+\\t\\tfloat4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\\n\
+\\t\\tfloat3 p = abs(frac(hsv.xxx + K.xyz) * 6.0 - K.www);\\n\
+\\t\\treturn hsv.z * lerp(K.xxx, saturate(p - K.xxx), hsv.y);\\n\
+\\t}\\n\
+};\\n\
+Functions f;\\n"
+
+Mix_BlendeType_Code = {
+    'MIX' : "return lerp(a, b, t);",
+    'MULTIPLY' : "return a * (b * t);",
+    'DIVIDE' : "return a / (b * t);",
+    'ADD' : "return a + (b * t);",
+    'SUBTRACT' : "return a - (b * t);",
+    'SCREEN' : "float tm = 1 - t;\\nreturn 1 - (tm + t * (1 - b)) * (1 - a);",
+    'DIFFERENCE' : "float tm = 1 - t;\\nreturn tm * a + t * abs(a - b);",
+    'DARKEN' : "float tm = 1 - t;\\nreturn t * min(a, b) + tm * a;",
+    'LIGHTEN' : "return max(a, t*b);",
+    'DODGE' : "return a/(1-t*b);",
+    'BURN' : "float tm = 1 - t;\\nreturn 1-(1-a)/(tm+t*b);",
+    'SOFT_LIGHT' : "float tm = 1 - t;\\nfloat3 sc = 1 - (1 - a) * (1 - b);\\nreturn tm * a + t * ((1 - a) * b * a + a * sc);",
+    'LINEAR_LIGHT' : "return a + t * ( 2 * (b - 0.5f));",
+    ###
+    'OVERLAY' : "\
+struct Functions\\n\
+{\\n\
+\\tfloat overlay(float a, float b, float t)\\n\
+\\t{\\n\
+\\t\\tfloat tm = 1 - t;\\n\
+\\t\\treturn a < 0.5 ? a*(tm+2*t*b) : 1-(tm+2*t*(1-b))*(1-a);\\n\
+\\t}\\n\
+\\tfloat3 overlay(float3 a, float3 b, float t)\\n\
+\\t{\\n\
+\\t\\treturn float3(overlay(a.x, b.x, t), overlay(a.y, b.y, t), overlay(a.z, b.z, t));\\n\
+\\t}\\n\
+};\\n\
+Functions f;\\n\
+return f.overlay(a, b, t);\\n",
+    ###
+    'VALUE' : convert_func_code + "\
+float tm = 1 - t;\\n\
+float3 a_hsv = f.rgb_to_hsv(a);\\n\
+float3 b_hsv = f.rgb_to_hsv(b);\\n\
+return f.hsv_to_rgb(float3(a_hsv.x, a_hsv.y, tm*a_hsv.z + t*b_hsv.z));",
+    ###
+    'COLOR' : convert_func_code + "\
+float tm = 1 - t;\\n\
+float3 b_hsv = f.rgb_to_hsv(b);\\n\
+if (b_hsv.y != 0)\\n\
+{\
+\\tfloat3 a_hsv = f.rgb_to_hsv(a);\\n\
+\\tfloat3 tempc = f.hsv_to_rgb(float3(b_hsv.x, b_hsv.y, a_hsv.z));\\n\
+\\ta = tm * a + t * tempc;\\n\
+}\
+return a;",
+    ###
+    'HUE' : convert_func_code + "\
+float tm = 1 - t;\\n\
+float3 b_hsv = f.rgb_to_hsv(b);\\n\
+float3 a_hsv = f.rgb_to_hsv(a);\\n\
+float3 tmp = f.hsv_to_rgb(float3(b_hsv.x, a_hsv.y, a_hsv.z));\\n\
+return b_hsv.y != 0 ? tm*a+t*tmp : a;",
+    ###
+    'SATURATION' : convert_func_code + "\
+float tm = 1 - t;\\n\
+float3 a_hsv = f.rgb_to_hsv(a);\\n\
+float3 b_hsv = f.rgb_to_hsv(b);\\n\
+float3 tmp = f.hsv_to_rgb(float3(a_hsv.x, (tm*a_hsv.y+t*b_hsv.y), a_hsv.z));\\n\
+return a_hsv.y != 0 ? tmp : a;"
+}
+
+def _exp_mix(node, linked_info):
+    exp = ''
+    pin = ''
+    exp_constants = []
+
+    blend_type = node.blend_type
+
+    var_name = ['t', 'a', 'b']
+
+    if blend_type in Mix_BlendeType_Code:
+        exp += "\t\tCode=\"%s\"\n"%(Mix_BlendeType_Code[blend_type])
+        exp += "\t\tDescription=\"%s\"\n"%(blend_type)
+
+        for i, inputs in enumerate(linked_info['inputs_uuid']):
+            links_pin_str = ''
+
+            linkto_type = ''
+            linkto_graph = ''
+            linkto_node = ''
+
+            # if constant var, create a new node
+            if '_CONSTANT_' in linked_info['node_names'][0][i]:
+                constant_str, constant_names, constant_uuid = _exp_constant(linked_info['node_names'][0][i]['_CONSTANT_']["Type"], 
+                                                            linked_info['node_names'][0][i]['_CONSTANT_']["Value"], 
+                                                            _get_node_names(-1, node), inputs[0], node.location)
+                exp_constants.append(constant_str)
+                linkto_graph = constant_names[0]
+                linkto_node = constant_names[1]
+                linkto_type = constant_names[2]
+
+                links_pin_str = LinkTemplate.format(Graph=constant_names[0], UUID=constant_uuid)
+                pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+            else:
+                linkto_type = linked_info['node_names'][0][i][2]
+                linkto_graph = linked_info['node_names'][0][i][0]
+                linkto_node = linked_info['node_names'][0][i][1]
+
+                for j in range(1, len(inputs)):
+                    links_pin_str += LinkTemplate.format(Graph=linkto_graph, UUID=inputs[j])
+
+                pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+        
+            exp += CustomInputTemplate.format(int(i), var_name[i], FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
+        
+    if node.outputs[0].is_linked:
+        for output in linked_info['outputs_uuid']:
+            links_pin_str = ''
+            for i in range(1, len(output)):
+                links_pin_str += LinkTemplate.format(Graph=linked_info['node_names'][1][i-1][0], UUID=output[i])
+            pin += PinTemplate.format(UUID=output[0], LinkStr='Direction="EGPD_Output",' + LinkedToTemplate.format(links_pin_str))
+
+    return {"Value": exp, "Pin": pin, "Constant": exp_constants, "Replace": []}
+
 def _exp_fresnel(node, linked_info):
     exp = ''
     pin = ''
@@ -1289,11 +1309,15 @@ def _gen_node_str(id, node, comment=None) -> str:
     object_name = names[1]
     node_type = names[2]
 
+    begin_class = "/Script/UnrealEd.MaterialGraphNode"
+    if node.type == "REROUTE":
+        begin_class += "_Knot"
+
     NodeNameStr = NameOption.format(object_name)
 
     #1 Head
     node_expression = HeadTemplate.format(
-        ClassOption.format("/Script/UnrealEd.MaterialGraphNode"),
+        ClassOption.format(begin_class),
         NameOption.format(graph_name))
 
     #2 Head
@@ -1320,6 +1344,8 @@ def _gen_node_str(id, node, comment=None) -> str:
         content = _exp_rgb(node, linked_info)
     elif node.type == 'VALUE':
         content = _exp_value(node, linked_info)
+    elif node.type == 'REROUTE':
+        content = _exp_reroute(node, linked_info)
     elif node.type == 'VECT_TRANSFORM':
         content = _exp_vec_transform(node, linked_info)
     elif node.type == 'UVMAP':
@@ -1336,6 +1362,8 @@ def _gen_node_str(id, node, comment=None) -> str:
         content = _exp_texcoord(node, linked_info)
     elif node.type == 'NEW_GEOMETRY':
         content = _exp_geometry(node, linked_info)
+    elif node.type == 'MIX_RGB':
+        content = _exp_mix(node, linked_info)
     elif node.type == 'FRESNEL':
         content = _exp_fresnel(node, linked_info)
     elif node.type == 'MATH':
