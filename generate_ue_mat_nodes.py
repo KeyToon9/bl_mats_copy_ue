@@ -103,7 +103,7 @@ def _gen_linked_infos(id, node):
 
                     link_to_pin_uuid = ''
                     if not link.from_socket in gl_node_socket_map:
-                        uuid_name = link.from_node.name + link.from_socket.identifier
+                        uuid_name = node.type + node.name + input.identifier + link.from_node.name + link.from_socket.identifier
                         link_to_pin_uuid = get_uuid(uuid_name)
                         gl_node_socket_map[link.from_socket] = link_to_pin_uuid
                     else:
@@ -146,7 +146,7 @@ def _gen_linked_infos(id, node):
 
                     link_to_pin_uuid = ''
                     if not link.to_socket in gl_node_socket_map:
-                        uuid_name = link.to_node.name + link.to_socket.identifier
+                        uuid_name = node.type + node.name + output.identifier + link.to_node.name + link.to_socket.identifier
                         link_to_pin_uuid = get_uuid(uuid_name)
                         gl_node_socket_map[link.to_socket] = link_to_pin_uuid
                     else:
@@ -396,6 +396,7 @@ def _internal_vect_transform(type, fromtype, totype, from_names, linkto_names, l
 # todo:
 # figure out the index of uvmap in blender 
 # (we can only know the name of uvmap, but ue need index)
+# todo: append zero value to z channel to make a float3
 def _exp_uvmap(node, linked_info):
     exp = ''
     pin = ''
@@ -1080,7 +1081,7 @@ def _exp_rgb2bw(node, linked_info):
     return {"Value": exp, "Pin": pin, "Constant": exp_constants, "Replace": []}
 
 def _exp_comb_xyz(node, linked_info):
-    MatFunction = "/Engine/Functions/Engine_MaterialFunctions02/Utility/MakeFloat4.MakeFloat4"
+    MatFunction = "/Engine/Functions/Engine_MaterialFunctions02/Utility/MakeFloat3.MakeFloat3"
     exp = ''
     pin = ''
     exp_constants = []
@@ -1133,7 +1134,7 @@ def _exp_comb_xyz(node, linked_info):
     return {"Value": exp, "Pin": pin, "Constant": exp_constants, "Replace": []}
 
 def _exp_sep_xyz(node, linked_info):
-    MatFunction = "/Engine/Functions/Engine_MaterialFunctions02/Utility/BreakOutFloat4Components.BreakOutFloat4Components"
+    MatFunction = "/Engine/Functions/Engine_MaterialFunctions02/Utility/BreakOutFloat3Components.BreakOutFloat3Components"
     exp = ''
     pin = ''
     exp_constants = []
@@ -1174,11 +1175,9 @@ def _exp_sep_xyz(node, linked_info):
     exp += "\t\tFunctionOutputs(0)=(Output=(OutputName=\"R\"))\n"
     exp += "\t\tFunctionOutputs(1)=(Output=(OutputName=\"G\"))\n"
     exp += "\t\tFunctionOutputs(2)=(Output=(OutputName=\"B\"))\n"
-    exp += "\t\tFunctionOutputs(3)=(Output=(OutputName=\"A\"))\n"
     exp += "\t\tOutputs(0)=(OutputName=\"R\")\n"
     exp += "\t\tOutputs(1)=(OutputName=\"G\")\n"
     exp += "\t\tOutputs(2)=(OutputName=\"B\")\n"
-    exp += "\t\tOutputs(3)=(OutputName=\"A\")\n"
     
     for i, outputs in enumerate(linked_info['outputs_uuid']):
         links_pin_str = ''
@@ -1307,6 +1306,7 @@ def _exp_math(node, linked_info, force_op=None):
             exp += InputTemplate.format("Input", linkto_type, linkto_graph, linkto_node)
     
     if node.outputs[0].is_linked:
+        o_uuid = linked_info['outputs_uuid'][0][0]
         for output in linked_info['outputs_uuid']:
             links_pin_str = ''
             for i in range(1, len(output)):
