@@ -72,6 +72,10 @@ NodeClassMap = {
     # Vector Math One Input
     "NORMALIZE" : "/Script/Engine.MaterialExpressionNormalize",
     "LENGTH" : "/Script/Engine.MaterialExpressionDistance",
+    # Converter
+    "BLACKBODY" : "/Script/Engine.MaterialExpressionBlackBody",
+    "RGBTOBW" : "/Script/Engine.MaterialExpressionCustom",
+    "CLAMP" : "/Script/Engine.MaterialExpressionClamp",
 }
 
 NodeNameMap = {
@@ -148,4 +152,8 @@ NodeNameMap = {
     # Vector Math One Input
     "NORMALIZE" : "MaterialExpressionNormalize",
     "LENGTH" : "MaterialExpressionDistance",
+    # Converter
+    "BLACKBODY" : "MaterialExpressionBlackBody",
+    "RGBTOBW" : "MaterialExpressionCustom",
+    "CLAMP" : "MaterialExpressionClamp",
 }
