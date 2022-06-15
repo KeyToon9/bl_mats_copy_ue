@@ -49,6 +49,8 @@ NodeClassMap = {
     "MAXIMUM" : "/Script/Engine.MaterialExpressionMax",
     "MODULO" : "/Script/Engine.MaterialExpressionFmod",
     "ARCTAN2" : "/Script/Engine.MaterialExpressionArctangent2Fast",
+    "LESS_THAN" : "/Script/Engine.MaterialExpressionCustom",
+    "GREATER_THAN" : "/Script/Engine.MaterialExpressionCustom",
     # Math Node One Input
     "SQRT" : "/Script/Engine.MaterialExpressionSquareRoot",
 	"ABSOLUTE" : "/Script/Engine.MaterialExpressionAbs",
@@ -129,6 +131,8 @@ NodeNameMap = {
     "MAXIMUM" : "MaterialExpressionMax",
     "MODULO" : "MaterialExpressionFmod",
     "ARCTAN2" : "MaterialExpressionArctangent2Fast",
+    "LESS_THAN" : "MaterialExpressionCustom",
+    "GREATER_THAN" : "MaterialExpressionCustom",
     # Math Node One Input
     "SQRT": "MaterialExpressionSquareRoot",
 	"ABSOLUTE": "MaterialExpressionAbs",

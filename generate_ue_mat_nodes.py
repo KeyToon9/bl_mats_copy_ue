@@ -1201,6 +1201,8 @@ Math_Two_NodeClassMap = {
     # You can change to normal node
     # Y X
     "ARCTAN2",
+    "LESS_THAN",
+    "GREATER_THAN",
 }
 
 # Input
@@ -1230,6 +1232,14 @@ def _exp_math(node, linked_info, force_op=None):
     exp = ''
     pin = ''
     exp_constants = []
+    if op == "LESS_THAN":
+        exp += "\t\tCode=\"return a<b;\"\n"
+        exp += "\t\tOutputType=CMOT_Float1\n"
+        exp += "\t\tDescription=\"LESS_THAN\"\n"
+    elif op == "GREATER_THAN":
+        exp += "\t\tCode=\"return a>b;\"\n"
+        exp += "\t\tOutputType=CMOT_Float1\n"
+        exp += "\t\tDescription=\"GREATER_THAN\"\n"
     if op in Math_Two_NodeClassMap:
         for i, inputs in enumerate(linked_info['inputs_uuid']):
             links_pin_str = ''
@@ -1264,6 +1274,9 @@ def _exp_math(node, linked_info, force_op=None):
                     exp += InputTemplate.format("Base", linkto_type, linkto_graph, linkto_node)
                 elif op == 'ARCTAN2':
                     exp += InputTemplate.format("Y", linkto_type, linkto_graph, linkto_node)
+                elif op == "LESS_THAN" or op == "GREATER_THAN":
+                    exp += CustomInputTemplate.format(int(i), 'a', FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
+                    
                 else:
                     exp += InputTemplate.format("A", linkto_type, linkto_graph, linkto_node)
             else:
@@ -1271,6 +1284,8 @@ def _exp_math(node, linked_info, force_op=None):
                     exp += InputTemplate.format("Exponent", linkto_type, linkto_graph, linkto_node)
                 elif op == 'ARCTAN2':
                     exp += InputTemplate.format("X", linkto_type, linkto_graph, linkto_node)
+                elif op == "LESS_THAN" or op == "GREATER_THAN":
+                    exp += CustomInputTemplate.format(int(i), 'b', FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
                 else:
                     exp += InputTemplate.format("B", linkto_type, linkto_graph, linkto_node)
 
@@ -1304,6 +1319,8 @@ def _exp_math(node, linked_info, force_op=None):
                 pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
             
             exp += InputTemplate.format("Input", linkto_type, linkto_graph, linkto_node)
+
+    
     
     if node.outputs[0].is_linked:
         o_uuid = linked_info['outputs_uuid'][0][0]
