@@ -22,6 +22,8 @@ Go to UE material and press paste shotcut (Ctrl + V).
 
 Because of the limitation of **clipboard** and the **Render differences** between Blender and UE, this addon can't copy some node like **Shader**, **Image**, some special **attributes** in blender and so on...
 
+And be aware that all texcoord nodes are float2 in UE but float3 in Blender. You need to append a value for texcoord.
+
 ### Symbol Meannig
 
 ✅Yes : Totally Supported.
