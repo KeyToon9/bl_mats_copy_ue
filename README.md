@@ -94,6 +94,7 @@ And be aware that all texcoord nodes are float2 in UE but float3 in Blender. You
 | ColorRamp | ❌ |
 | Combine HSV | 🚷 |
 | Combine RGB | ✅ |
+| Combine XYZ | ✅ |
 | Float Curves | ❌ |
 | Map Range | 🚷 |
 | Math | ⚠️ |
@@ -115,7 +116,7 @@ And be aware that all texcoord nodes are float2 in UE but float3 in Blender. You
 
 You can create a material function.
 
-## Layout
+### Layout
 
 | Blender Node | Is Supported |
 | ---- | ---- |
