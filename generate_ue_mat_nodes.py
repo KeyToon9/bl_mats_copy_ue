@@ -92,7 +92,7 @@ def _gen_linked_infos(id, node):
             # process input linked socket
             if input.is_linked:
                 for link in input.links:
-                    if not link.from_node in gl_nodes:
+                    if not link.from_node in gl_nodes or not link.from_node in NodeClassMap:
                         ret_in_node_names.append({'_CONSTANT_' : {"Type": input.type, "Value": input.default_value}})
                         continue
                     # get linked node info
@@ -136,7 +136,7 @@ def _gen_linked_infos(id, node):
 
             if output.is_linked:
                 for link in output.links:
-                    if not link.to_node in gl_nodes:
+                    if not link.to_node in gl_nodes or not link.to_node in NodeClassMap:
                         continue
                     # get linked node info
                     to_node_names = []
