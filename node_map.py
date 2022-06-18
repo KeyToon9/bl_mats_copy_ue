@@ -78,6 +78,8 @@ NodeClassMap = {
     "BLACKBODY" : "/Script/Engine.MaterialExpressionBlackBody",
     "RGBTOBW" : "/Script/Engine.MaterialExpressionCustom",
     "CLAMP" : "/Script/Engine.MaterialExpressionClamp",
+    # Vector
+    "MAPPING" : "/Script/Engine.MaterialExpressionCustom",
 }
 
 NodeNameMap = {
@@ -160,4 +162,6 @@ NodeNameMap = {
     "BLACKBODY" : "MaterialExpressionBlackBody",
     "RGBTOBW" : "MaterialExpressionCustom",
     "CLAMP" : "MaterialExpressionClamp",
+    # Vector
+    "MAPPING" : "MaterialExpressionCustom",
 }

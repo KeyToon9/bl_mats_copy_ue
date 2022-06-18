@@ -92,7 +92,7 @@ def _gen_linked_infos(id, node):
             # process input linked socket
             if input.is_linked:
                 for link in input.links:
-                    if not link.from_node in gl_nodes or not link.from_node in NodeClassMap:
+                    if not link.from_node in gl_nodes or not link.from_node.type in NodeClassMap:
                         ret_in_node_names.append({'_CONSTANT_' : {"Type": input.type, "Value": input.default_value}})
                         continue
                     # get linked node info
@@ -136,7 +136,7 @@ def _gen_linked_infos(id, node):
 
             if output.is_linked:
                 for link in output.links:
-                    if not link.to_node in gl_nodes or not link.to_node in NodeClassMap:
+                    if not link.to_node in gl_nodes or not link.to_node.type in NodeClassMap:
                         continue
                     # get linked node info
                     to_node_names = []
@@ -1119,7 +1119,7 @@ def _exp_comb_xyz(node, linked_info):
         exp += FuncInputTemplate.format(int(i), FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
     
     # make float4
-    exp += FuncInputTemplate.format(int(3), "Input=(OutputIndex=-1,InputName=\"A\")")
+    # exp += FuncInputTemplate.format(int(3), "Input=(OutputIndex=-1,InputName=\"A\")")
     exp += "\t\tFunctionOutputs(0)=(Output=(OutputName=\"Result\"))\n"
     exp += "\t\tOutputs(0)=(OutputName=\"Result\")\n"
     
@@ -1457,6 +1457,133 @@ def _exp_vect_math(node, linked_info, force_op=None):
 
     return {"Value": exp, "Pin": pin, "Constant": exp_constants, "Replace": []}
 
+# see blender\intern\cycles\kernel\svm\mapping_utils.h 22
+map_utils_code = [
+"struct Functions\\n\
+{\\n\
+\\tfloat3x3 rotation_to_transform(float3 r)\\n\
+\\t{\\n\
+\\t\\tfloat cx = cos(r.x);\\n\
+\\t\\tfloat cy = cos(r.y);\\n\
+\\t\\tfloat cz = cos(r.z);\\n\
+\\t\\tfloat sx = sin(r.x);\\n\
+\\t\\tfloat sy = sin(r.y);\\n\
+\\t\\tfloat sz = sin(r.z);\\n\
+\\n\
+\\t\\tfloat3x3 t;\\n\
+\\t\\tt._11 = cy * cz;\\n\
+\\t\\tt._21 = cy * sz;\\n\
+\\t\\tt._31 = -sy;\\n\
+\\n\
+\\t\\tt._12 = sy * sx * cz - cx * sz;\\n\
+\\t\\tt._22 = sy * sx * sz + cx * cz;\\n\
+\\t\\tt._32 = cy * sx;\\n\
+\\n\
+\\t\\tt._13 = sy * cx * cz + sx * sz;\\n\
+\\t\\tt._23 = sy * cx * sz - sx * cz;\\n\
+\\t\\tt._33 = cy * cx;\\n\
+\\t\\treturn t;\\n\
+\\t}\\n\
+\\tfloat3 transform_direciton(float3x3 t, float3 a)\\n\
+\\t{\\n\
+\\t\\tfloat3 c = float3(a.x * t._11 + a.y * t._12 + a.z * t._13,\\n\
+\\t\\t\\t\\t\\t\\t\\ta.x * t._21 + a.y * t._22 + a.z * t._23,\\n\
+\\t\\t\\t\\t\\t\\t\\ta.x * t._31 + a.y * t._32 + a.z * t._33);\\n\
+\\t\\treturn c;\\n\
+\\t}\\n\
+};\\n\
+Functions f;\\n",
+###
+"struct Functions\\n\
+{\\n\
+\\tfloat3x3 rotation_to_transform(float3 r)\\n\
+\\t{\\n\
+\\t\\tfloat cx = cos(r.x);\\n\
+\\t\\tfloat cy = cos(r.y);\\n\
+\\t\\tfloat cz = cos(r.z);\\n\
+\\t\\tfloat sx = sin(r.x);\\n\
+\\t\\tfloat sy = sin(r.y);\\n\
+\\t\\tfloat sz = sin(r.z);\\n\
+\\n\
+\\t\\tfloat3x3 t;\\n\
+\\t\\tt._11 = cy * cz;\\n\
+\\t\\tt._21 = cy * sz;\\n\
+\\t\\tt._31 = -sy;\\n\
+\\n\
+\\t\\tt._12 = sy * sx * cz - cx * sz;\\n\
+\\t\\tt._22 = sy * sx * sz + cx * cz;\\n\
+\\t\\tt._32 = cy * sx;\\n\
+\\n\
+\\t\\tt._13 = sy * cx * cz + sx * sz;\\n\
+\\t\\tt._23 = sy * cx * sz - sx * cz;\\n\
+\\t\\tt._33 = cy * cx;\\n\
+\\t\\treturn t;\\n\
+\\t}\\n\
+\\tfloat3 transform_direciton_transposed(float3x3 t, float3 a)\\n\
+\\t{\\n\
+\\t\\tfloat3 x = float3(t._11, t._21, t._31);\\n\
+\\t\\tfloat3 y = float3(t._12, t._22, t._32);\\n\
+\\t\\tfloat3 z = float3(t._13, t._23, t._33);\\n\
+\\t\\treturn float3(dot(x, a), dot(y, a), dot(z, a));\\n\
+\\t}\\n\
+};\\n\
+Functions f;\\n"
+]
+MappingCode = {
+    'POINT' : map_utils_code[0] + "return f.transform_direciton(f.rotation_to_transform(rotation_1), vector_1 * scale_1) + location_1;",
+    'TEXTURE' : map_utils_code[1] + "return f.transform_direciton_transposed(f.rotation_to_transform(rotation_1), vector_1 - location_1) / scale_1;",
+    'VECTOR' : map_utils_code[0] + "return f.transform_direciton(f.rotation_to_transform(rotation_1), vector_1 * scale_1);",
+    'NORMAL' : map_utils_code[0] + "return f.transform_direciton(f.rotation_to_transform(rotation_1), vector_1 / scale_1);",
+}
+
+
+def _exp_mapping(node, linked_info):
+    vector_type = node.vector_type
+    exp = ''
+    pin = ''
+    exp_constants = []
+
+    var_name = ['vector_1', 'location_1', 'rotation_1', 'scale_1']
+    if len(linked_info['inputs_uuid']) == 3:
+        var_name = ['vector_2', 'rotation_2', 'scale_2']
+
+    if vector_type in MappingCode:
+        exp += "\t\tCode=\"%s\"\n"%(MappingCode[vector_type])
+        exp += "\t\tDescription=\"Mapping_%s\"\n"%(vector_type)
+
+        for i, inputs in enumerate(linked_info['inputs_uuid']):
+            links_pin_str = ''
+
+            linkto_type = ''
+            linkto_graph = ''
+            linkto_node = ''
+
+            # if constant var, create a new node
+            if '_CONSTANT_' in linked_info['node_names'][0][i]:
+                constant_str, constant_names, constant_uuid = _exp_constant(linked_info['node_names'][0][i]['_CONSTANT_']["Type"], 
+                                                            linked_info['node_names'][0][i]['_CONSTANT_']["Value"], 
+                                                            _get_node_names(-1, node), inputs[0], node.location)
+                exp_constants.append(constant_str)
+                linkto_graph = constant_names[0]
+                linkto_node = constant_names[1]
+                linkto_type = constant_names[2]
+
+                links_pin_str = LinkTemplate.format(Graph=constant_names[0], UUID=constant_uuid)
+                pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+            else:
+                linkto_type = linked_info['node_names'][0][i][2]
+                linkto_graph = linked_info['node_names'][0][i][0]
+                linkto_node = linked_info['node_names'][0][i][1]
+
+                for j in range(1, len(inputs)):
+                    links_pin_str += LinkTemplate.format(Graph=linkto_graph, UUID=inputs[j])
+
+                pin += PinTemplate.format(UUID=inputs[0], LinkStr=LinkedToTemplate.format(links_pin_str))
+        
+            exp += CustomInputTemplate.format(int(i), var_name[i], FuncExpInputTemplate.format("Input", linkto_type, linkto_graph, linkto_node))
+
+    return {"Value": exp, "Pin": pin, "Constant": exp_constants, "Replace": []}
+
 def _gen_node_str(id, node, comment=None) -> str:
     node_expression : str = ""
 
@@ -1539,6 +1666,8 @@ def _gen_node_str(id, node, comment=None) -> str:
     elif node.type == 'GAMMA':
         content = _exp_math(node, linked_info, 'POWER')
         comment = "Gamma"
+    elif node.type == 'MAPPING':
+        content = _exp_mapping(node, linked_info)
 
     node_expression += content["Value"]
     

@@ -11,9 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from posixpath import split
 import site
-import sys
 import bpy, os
 from bpy.props import BoolProperty
 from . import generate_ue_mat_nodes
@@ -24,7 +22,7 @@ bl_info = {
     "author" : "KeyToon9",
     "description" : "",
     "blender" : (3, 00, 0),
-    "version" : (0, 0, 1),
+    "version" : (0, 1, 3),
     "location" : "https://github.com/KeyToon9/bl_mats_copy_ue",
     "warning" : "",
     "category" : "Generic"

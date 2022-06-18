@@ -83,7 +83,17 @@ And be aware that all texcoord nodes are float2 in UE but float3 in Blender. You
 
 ### Vector
 
-🚷Todo
+| Blender Node | Is Supported |
+| ---- | ---- |
+| Bump | 🚷 |
+| Displacement | ❌ |
+| Mapping | ✅ |
+| Normal | ❌ |
+| Normal Map | ❌ |
+| Vector Curve | ❌ |
+| Vector Displacement | ❌ |
+| Vector Rotate | 🚷 |
+| Vector Transform | ⚠️ |
 
 ### Converter
 
