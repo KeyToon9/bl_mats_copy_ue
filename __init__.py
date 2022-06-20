@@ -114,7 +114,7 @@ class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
         
 
 def register():
-    install.update_sys_path(site.getusersitepackages(), [])
+    # install.update_sys_path(site.getusersitepackages(), [])
     bpy.utils.register_class(CP2U_OT_CopyMatNodesOperator)
     bpy.utils.register_class(CP2U_PT_MatEditorPanel)
     bpy.utils.register_class(CP2U_OT_InstallPyperclip)
