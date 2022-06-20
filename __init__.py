@@ -11,22 +11,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+bl_info = {
+    "name": "Material Nodes Copy to UE",
+    "author": "KeyToon9",
+    "description": "",
+    "blender": (3, 00, 0),
+    "version": (0, 1, 3),
+    "location": "Shader Editor > N Panel",
+    "doc_url": "https://github.com/atticus-lv/bl_mats_copy_ue#bl_mats_copy_ue",
+    "warning": "",
+    "category": "Generic"
+}
+
 import site
 import bpy, os
 from bpy.props import BoolProperty
 from . import generate_ue_mat_nodes
 from . import install
 
-bl_info = {
-    "name" : "Material Nodes Copy to UE",
-    "author" : "KeyToon9",
-    "description" : "",
-    "blender" : (3, 00, 0),
-    "version" : (0, 1, 3),
-    "location" : "https://github.com/KeyToon9/bl_mats_copy_ue",
-    "warning" : "",
-    "category" : "Generic"
-}
 
 class CP2U_OT_CopyMatNodesOperator(bpy.types.Operator):
     bl_idname: str = "cp2u.copy_mat_nodes"
@@ -45,14 +47,15 @@ class CP2U_OT_CopyMatNodesOperator(bpy.types.Operator):
         mats_str = generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height, self)
         context.window_manager.clipboard = mats_str
         self.report({'INFO'}, "Copy to clipboard.")
-        
+
         return {"FINISHED"}
 
     def invoke(self, context, event):
         # print(event.type)
 
         return self.execute(context)
-        
+
+
 class CP2U_PT_MatEditorPanel(bpy.types.Panel):
     bl_idname: str = "cp2u.mat_editor_panel"
     bl_label: str = "CP2U"
@@ -68,11 +71,14 @@ class CP2U_PT_MatEditorPanel(bpy.types.Panel):
 
         row.operator("cp2u.copy_mat_nodes", text="Copy", icon="COPYDOWN")
 
+
 def get_name():
     return os.path.basename(os.path.dirname(os.path.realpath(__file__)))
 
+
 def get_prefs():
     return bpy.context.preferences.addons[get_name()].preferences
+
 
 class CP2U_OT_InstallPyperclip(bpy.types.Operator):
     bl_idname: str = "cp2u.install_pyperclip"
@@ -88,14 +94,15 @@ class CP2U_OT_InstallPyperclip(bpy.types.Operator):
         installed = install.install_pip(pythonbinpath, ensurepippath, log, mode='USER')
 
         if installed:
-
             installed = install.update_pip(pythonbinpath, log, mode='USER')
 
             installed = install.install_pyperclip(pythonbinpath, log, mode='USER')
 
-            get_prefs().is_installed_pyperclip, get_prefs().is_require_restart = install.test_import_pyperclip(installed, log, usersitepackagespath)
+            get_prefs().is_installed_pyperclip, get_prefs().is_require_restart = install.test_import_pyperclip(
+                installed, log, usersitepackagespath)
 
         return {"FINISHED"}
+
 
 class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
     bl_idname = __name__
@@ -109,9 +116,8 @@ class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
         # split = row.split(factor=0.3)
         # split.label(text="Copy Shortcut:")
         # split.box()
-        # todo: custom shortcut for copy noeds
+        # todo: custom shortcut for copy nodes
 
-        
 
 def register():
     # install.update_sys_path(site.getusersitepackages(), [])
@@ -120,11 +126,13 @@ def register():
     bpy.utils.register_class(CP2U_OT_InstallPyperclip)
     bpy.utils.register_class(CP2U_PT_AddonPreferencesPanel)
 
+
 def unregister():
     bpy.utils.unregister_class(CP2U_OT_CopyMatNodesOperator)
     bpy.utils.unregister_class(CP2U_PT_MatEditorPanel)
     bpy.utils.unregister_class(CP2U_PT_AddonPreferencesPanel)
     bpy.utils.unregister_class(CP2U_OT_InstallPyperclip)
+
 
 if __name__ == '__main__':
     register()
