@@ -41,20 +41,10 @@ class CP2U_OT_CopyMatNodesOperator(bpy.types.Operator):
 
     def execute(self, context):
         mats_str = ''
-        try:
-            import pyperclip
 
-            mats_str = generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height, self)
-            pyperclip.copy(mats_str)
-            self.report({'INFO'}, "Copy to clipboard.")
-        except ModuleNotFoundError:
-            print("Failed to import pyperclip module.")
-            self.report({'ERROR'}, "Failed to import pyperclip module.")
-            
-            # try refresh system path
-            import site
-            install.update_sys_path(site.getusersitepackages(), [])
-
+        mats_str = generate_ue_mat_nodes.get_ue_mat_str(self.get_selected_nodes(context), context.window.height, self)
+        context.window_manager.clipboard = mats_str
+        self.report({'INFO'}, "Copy to clipboard.")
         
         return {"FINISHED"}
 
@@ -115,12 +105,6 @@ class CP2U_PT_AddonPreferencesPanel(bpy.types.AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
-
-        layout.label(text="Install PIP and pyperclip for Blender Python:")
-        row = layout.row()
-
-        row.operator("cp2u.install_pyperclip", text="Install Pyperclip", icon="IMPORT")
-
         # row = layout.row()
         # split = row.split(factor=0.3)
         # split.label(text="Copy Shortcut:")
